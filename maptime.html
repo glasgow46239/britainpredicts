@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Britain Predicts — Constituency Map</title>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Roboto',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0;}
+
+/* ── Control bar ── */
+#control-bar{display:flex;align-items:center;gap:12px;padding:8px 10px;background:#f0ede8;border-bottom:1px solid #ddd;flex-wrap:wrap;}
+@media(max-width:480px){#control-bar{gap:8px;}#view-controls{width:100%;}#search-wrap{max-width:100%;}}
+#search-wrap{flex:1;min-width:160px;max-width:320px;position:relative;}
+#search-input{width:100%;padding:7px 14px;border:1px solid #ddd;border-radius:6px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#222;}
+#search-input:focus{border-color:#aaa;box-shadow:0 0 0 2px rgba(0,0,0,.06);}
+#search-input::placeholder{color:#bbb;}
+#search-results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid #e5e5e5;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;display:none;z-index:100;}
+#search-results.open{display:block;}
+.search-result-item{padding:9px 14px;cursor:pointer;border-bottom:1px solid #f5f5f5;display:flex;align-items:center;gap:9px;}
+.search-result-item:last-child{border-bottom:none;}
+.search-result-item:hover{background:#f8f8f7;}
+.search-result-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.search-result-text{flex:1;min-width:0;}
+.search-result-ward{font-size:13px;font-weight:500;color:#111;}
+.search-result-council{font-size:11px;color:#888;}
+.search-no-results{padding:12px 14px;font-size:12px;color:#aaa;text-align:center;}
+
+/* ── View controls ── */
+#view-controls{display:flex;align-items:center;gap:6px;font-size:11px;white-space:nowrap;flex-shrink:0;}
+.vc-label{color:#999;font-size:10px;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;}
+.vc-seg{display:flex;border:1px solid #e0e0e0;border-radius:12px;overflow:hidden;}
+.vc-btn{padding:3px 10px;font-size:11px;font-family:inherit;border:none;background:transparent;cursor:pointer;color:#555;transition:background .15s,color .15s;}
+.vc-btn:hover{background:#f5f5f5;}
+.vc-btn.active{background:#222;color:#fff;}
+#party-select-wrap{display:none;align-items:center;gap:6px;}
+#party-select-wrap.visible{display:flex;}
+#party-select{border:1px solid #e0e0e0;border-radius:12px;padding:3px 8px;font-size:11px;font-family:inherit;background:#fff;color:#333;cursor:pointer;outline:none;}
+
+/* Live badge */
+#live-badge{margin-left:auto;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:12px;background:rgba(18,182,207,.15);color:#12B6CF;border:1px solid rgba(18,182,207,.4);display:none;}
+
+/* ── Map container ── */
+#map-container{position:relative;width:100%;height:600px;}
+#map{position:absolute;top:0;left:0;bottom:0;width:calc(100% - 280px);transition:width .2s ease;}
+
+/* ── Side panel ── */
+#side-panel{position:absolute;top:0;right:0;width:280px;max-height:100%;background:#fff;border-left:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;display:flex;flex-direction:column;overflow:hidden;z-index:10;visibility:hidden;}
+#side-panel.is-visible{visibility:visible;}
+.panel-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:10px;color:#bbb;font-size:13px;text-align:center;}
+.panel-placeholder svg{opacity:.3;}
+
+/* Result bar */
+.result-bar{display:flex;align-items:stretch;height:32px;flex-shrink:0;}
+.result-bar-incumbent{width:10px;flex-shrink:0;}
+.result-bar-fill{flex:1;display:flex;align-items:center;padding:0 10px;}
+.result-bar-text{font-size:11px;font-weight:600;text-transform:uppercase;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+/* Panel header */
+.panel-header{padding:10px 10px 8px;border-bottom:1px solid #f0f0f0;flex-shrink:0;}
+.con-name{font-size:14px;font-weight:600;color:#111;line-height:1.2;}
+.con-region{font-size:12px;color:#777;margin-top:3px;}
+.panel-body{padding:10px;overflow-y:auto;flex:1;}
+
+/* Stacked bars */
+.stacked-section{margin-bottom:12px;}
+.stacked-label{font-size:10px;color:#aaa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+.stacked-bar{display:flex;width:100%;height:15px;overflow:hidden;margin-bottom:2px;}
+.stacked-bar.previous{height:5px;opacity:.65;margin-bottom:0;}
+
+/* Results table */
+.results-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
+.results-table thead th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#aaa;font-weight:400;padding:0 3px 7px;}
+.results-table thead th:first-child{text-align:left;width:95px;padding-left:0;}
+.results-table thead th:nth-child(2){text-align:right;width:38px;}
+.results-table thead th:nth-child(4){text-align:right;width:44px;}
+.results-table tbody tr{border-top:1px solid #f5f5f5;}
+.results-table tbody td{padding:0 3px;vertical-align:middle;}
+.party-cell{display:flex;align-items:center;}
+.party-stripe{width:3px;height:21px;flex-shrink:0;}
+.party-name{font-size:12px;font-weight:400;color:#111;padding-left:8px;}
+.pct-cell{text-align:right;font-size:12px;font-weight:400;color:#111;font-variant-numeric:tabular-nums;}
+.bar-cell{padding:0 4px;}
+.bar-track{height:15px;background:#f0f0f0;overflow:hidden;}
+.bar-fill{height:100%;}
+.chg-cell{text-align:right;font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.chg-pos{color:#059669;}
+.chg-neg{color:#DC2626;}
+.chg-nil{color:#bbb;}
+
+/* ── Pin indicator ── */
+#pin-indicator{position:absolute;top:10px;left:50px;z-index:15;background:rgba(255,255,255,.94);border:1px solid #ddd;border-radius:20px;padding:5px 12px 5px 8px;font-size:11px;color:#333;display:none;align-items:center;gap:7px;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,.1);user-select:none;}
+#pin-indicator.active{display:flex;}
+#pin-indicator:hover{background:#f0f0f0;}
+
+/* ── Choropleth legend ── */
+#choropleth-legend{position:absolute;bottom:10px;left:10px;z-index:15;background:rgba(255,255,255,.94);border:1px solid #ddd;border-radius:8px;padding:8px 12px;box-shadow:0 1px 5px rgba(0,0,0,.1);display:none;flex-direction:column;gap:4px;min-width:140px;}
+#choropleth-legend.visible{display:flex;}
+#legend-title{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:2px;}
+#legend-gradient{height:10px;border-radius:3px;width:100%;}
+#legend-labels{display:flex;justify-content:space-between;font-size:10px;color:#666;font-variant-numeric:tabular-nums;}
+
+/* ── Mobile drawer ── */
+#drawer{position:absolute;bottom:0;left:0;right:0;z-index:20;background:#fff;border-top:1px solid #e5e5e5;transform:translateY(100%);transition:transform .3s ease;display:none;}
+#drawer.drawer-enabled{display:block;}
+#drawer-handle{display:flex;flex-direction:column;align-items:center;padding:10px 0;cursor:pointer;gap:5px;}
+#drawer-pip{width:36px;height:4px;border-radius:2px;background:#ddd;}
+#drawer-peek{display:flex;align-items:stretch;height:55px;overflow:hidden;margin-bottom:6px;}
+#drawer-toggle{flex-shrink:0;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.4);border-radius:20px;padding:3px 10px;cursor:pointer;background:rgba(0,0,0,.15);white-space:nowrap;}
+#drawer-toggle:hover{background:rgba(0,0,0,.25);}
+#drawer-body{padding:0 16px 24px;overflow-y:auto;max-height:55vh;display:none;}
+
+/* ── Attribution ── */
+.map-credit{font-size:11px;color:#aaa;text-align:center;padding:6px 0 10px;}
+.map-credit a{color:#aaa;}
+</style>
+</head>
+<body>
+<div id="control-bar">
+  <div id="search-wrap">
+    <input id="search-input" type="search" placeholder="Search constituency…" autocomplete="off">
+    <div id="search-results" role="listbox"></div>
+  </div>
+  <div id="view-controls">
+    <span class="vc-label">View</span>
+    <div class="vc-seg">
+      <button class="vc-btn active" data-mode="winner">Winner</button>
+      <button class="vc-btn" data-mode="share">Share</button>
+    </div>
+    <div id="party-select-wrap">
+      <span class="vc-label">Party</span>
+      <select id="party-select"></select>
+    </div>
+  </div>
+  <span id="live-badge">&#9679; Live</span>
+</div>
+
+<div id="map-container">
+  <div id="map"></div>
+
+  <div id="side-panel">
+    <div class="panel-placeholder" id="panel-placeholder">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+        <circle cx="12" cy="9" r="2.5"/>
+      </svg>
+      <span>Hover a constituency to see the projected result</span>
+    </div>
+    <div id="panel-inner" style="display:none;flex-direction:column;">
+      <div class="result-bar">
+        <div class="result-bar-incumbent" id="result-bar-incumbent"></div>
+        <div class="result-bar-fill" id="result-bar-fill">
+          <span class="result-bar-text" id="result-bar-text"></span>
+        </div>
+      </div>
+      <div class="panel-header" id="panel-header"></div>
+      <div class="panel-body" id="panel-body"></div>
+    </div>
+  </div>
+
+  <div id="choropleth-legend">
+    <div id="legend-title">Vote share</div>
+    <div id="legend-gradient"></div>
+    <div id="legend-labels"><span>0%</span><span id="legend-max"></span></div>
+  </div>
+
+  <div id="pin-indicator" role="button" title="Click to unpin">
+    <span id="pin-dot" style="width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;"></span>
+    <span id="pin-name"></span>
+    <span style="color:#bbb;">&#10005;</span>
+  </div>
+
+  <div id="drawer">
+    <div id="drawer-handle" role="button">
+      <div id="drawer-pip"></div>
+    </div>
+    <div id="drawer-peek">
+      <div id="drawer-peek-incumbent" style="width:8px;flex-shrink:0;align-self:stretch;"></div>
+      <div id="drawer-peek-fill" style="flex:1;display:flex;align-items:center;padding:0 10px;gap:8px;min-width:0;">
+        <div style="flex:1;min-width:0;">
+          <div id="drawer-peek-label" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#fff;line-height:1;margin-bottom:3px;"></div>
+          <div id="drawer-peek-name" style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+        </div>
+        <button id="drawer-toggle">Details &#8593;</button>
+      </div>
+    </div>
+    <div id="drawer-body"></div>
+  </div>
+</div>
+
+<p class="map-credit">Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors &middot; Tiles by <a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> &middot; Britain Predicts</p>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+// ============================================================
+// PARTY DEFINITIONS
+// Lowercase keys to match STM model output
+// ============================================================
+const PARTIES = {
+  grn:  { label:'Green',        short:'Grn',    color:'#02A95B' },
+  lab:  { label:'Labour',       short:'Lab',    color:'#E4003B' },
+  snp:  { label:'SNP',          short:'SNP',    color:'#C8A400' },
+  pc:   { label:'Plaid Cymru',  short:'PC',     color:'#3F8428' },
+  ldem: { label:'Lib Dem',      short:'LDem',   color:'#FAA61A' },
+  oth:  { label:'Other',        short:'Oth',    color:'#57534e' },
+  con:  { label:'Conservative', short:'Con',    color:'#0087DC' },
+  ref:  { label:'Reform',       short:'Reform', color:'#12B6CF' },
+};
+
+// Display order for stacked bars
+const BAR_ORDER = ['grn','lab','snp','pc','ldem','oth','con','ref'];
+
+// Choropleth ceilings
+const CHOROPLETH_CEILINGS = { grn:50, lab:65, snp:60, pc:60, ldem:50, oth:30, con:65, ref:55 };
+
+// ============================================================
+// CONFIG
+// ============================================================
+const RESULTS_URL = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv';
+const GEO_URL     = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/parlcons_westmisnter.json';
+const NI_CODES    = new Set(['N06000001','N06000002','N06000003','N06000004','N06000005','N06000006','N06000007','N06000008','N06000009','N06000010','N06000011','N06000012']);
+const WM = {'Con':'con','Lab':'lab','LDem':'ldem','LD':'ldem','Grn':'grn','Green':'grn','SNP':'snp','PC':'pc','Reform':'ref','Ref':'ref','Ind':'oth','Other':'oth','Oth':'oth','Alba':'oth','Speaker':'oth','SDLP':'oth','UUP':'oth','DUP':'oth','SF':'oth','Alliance':'oth','APNI':'oth','TUV':'oth','RSTR':'oth','Restore':'oth'};
+
+// STM constants
+const BN   = {con:23.7,lab:33.7,ldem:12.2,grn:6.7,snp:2.5,pc:0.7,ref:14.3,oth:6.2};
+const MP   = ['con','lab','ldem','grn','snp','pc','ref','oth'];
+const POLL_NAT = {con:18.4,lab:18.3,ldem:12.2,grn:15.6,snp:0,pc:0,ref:26.4,oth:6.8};
+const POLL_REG = {
+  Scotland:        {con:10.3,lab:17.3,ldem:9.0,grn:7.9,snp:32.4,pc:0,ref:20.2,oth:2.9},
+  Wales:           {con:12.8,lab:18.7,ldem:7.3,grn:7.1,snp:0,pc:26.2,ref:26.9,oth:1.0},
+  'Northern England':  {con:14.5,lab:22.4,ldem:9.6,grn:18.2,snp:0,pc:0,ref:30.2,oth:5.1},
+  'Southern England':  {con:21.2,lab:13.8,ldem:19.4,grn:15.7,snp:0,pc:0,ref:25.7,oth:4.2},
+  Midlands:        {con:21.5,lab:18.4,ldem:9.0,grn:18.0,snp:0,pc:0,ref:28.1,oth:5.0},
+  London:          {con:18.7,lab:26.4,ldem:13.1,grn:22.9,snp:0,pc:0,ref:15.3,oth:3.6},
+};
+
+function initDeltas(){const d={};Object.keys(POLL_REG).forEach(r=>{d[r]={};MP.forEach(p=>{d[r][p]=(POLL_REG[r][p]||0)-(POLL_NAT[p]||0);});});return d;}
+const national={...POLL_NAT}, deltas=initDeltas();
+function effShare(region,p){if(!POLL_REG[region])return national[p]||0;return Math.max(0,(national[p]||0)+((deltas[region]||{})[p]||0));}
+
+// ============================================================
+// CSV parser — RFC 4180 compliant
+// ============================================================
+function parseCSVLine(line){const f=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const ch=line[i];if(inQ){if(ch==='"'&&line[i+1]==='"'){cur+='"';i++;}else if(ch==='"'){inQ=false;}else{cur+=ch;}}else{if(ch==='"'){inQ=true;}else if(ch===','){f.push(cur.trim());cur='';}else{cur+=ch;}}}f.push(cur.trim());return f;}
+function parseCSV(text){const lines=text.trim().split('\n'),h=parseCSVLine(lines[0]);return lines.slice(1).filter(l=>l.trim()).map(l=>{const v=parseCSVLine(l),o={};h.forEach((k,i)=>o[k.trim()]=v[i]??'');return o;});}
+
+// ============================================================
+// STM MODEL
+// ============================================================
+function inferTac(v){const s=MP.filter(p=>(v[p]||0)>0.03).sort((a,b)=>(v[b]||0)-(v[a]||0));const[f,sc]=s;if(!sc)return null;const pr=new Set([f,sc]);if(pr.has('lab')&&pr.has('ref'))return'lab_ref';if(pr.has('ldem')&&pr.has('con'))return'ldem_con';if(pr.has('grn')&&pr.has('lab'))return'grn_lab';return null;}
+
+function stm(seat){
+  const thr=0.20,base=seat.votes,newN={},baseN={};
+  MP.forEach(p=>{newN[p]=effShare(seat.region,p)/100;baseN[p]=(BN[p]||0)/100;});
+  const sw={};MP.forEach(p=>{sw[p]=newN[p]-baseN[p];});
+  const pr={};MP.forEach(p=>{const loc=base[p]||0,s=sw[p]||0;pr[p]=loc>=thr?Math.max(0,loc+s*Math.max(0,1-loc)*2):Math.max(0,loc*(1-Math.min(1,s<0?Math.abs(s)*2:0)));});
+  const t=seat.tac;
+  if(t==='lab_ref'){const ga=(pr.grn||0)*.10,la=(pr.ldem||0)*.08;pr.grn=Math.max(0,(pr.grn||0)-ga);pr.ldem=Math.max(0,(pr.ldem||0)-la);pr.lab=(pr.lab||0)+ga+la;}
+  else if(t==='ldem_con'){const ga=(pr.grn||0)*.12,la=(pr.lab||0)*.15;pr.grn=Math.max(0,(pr.grn||0)-ga);pr.lab=Math.max(0,(pr.lab||0)-la);pr.ldem=(pr.ldem||0)+ga+la;}
+  else if(t==='grn_lab'){const la=(pr.ldem||0)*.10;pr.ldem=Math.max(0,(pr.ldem||0)-la);pr.grn=(pr.grn||0)+la;}
+  const tot=Object.values(pr).reduce((a,b)=>a+b,0);if(tot>0)MP.forEach(p=>pr[p]=(pr[p]||0)/tot);
+  const sorted=MP.slice().sort((a,b)=>(pr[b]||0)-(pr[a]||0));
+  return{winner:sorted[0],margin:((pr[sorted[0]]||0)-(pr[sorted[1]]||0))*100,shares:pr};
+}
+
+// ============================================================
+// DATA — keyed by PCON24CD
+// ============================================================
+let DATA = {}; // { code: { name, region, defender, votes, winner, margin, shares } }
+
+async function loadData(){
+  try{
+    const r=await fetch(RESULTS_URL);
+    if(!r.ok)throw new Error('fetch failed');
+    const rows=parseCSV(await r.text());
+    rows.forEach(row=>{
+      const code=row['PCON24CD'], region=(row['Region']||'').trim();
+      if(!code||region==='Northern Ireland')return;
+      const votes={};
+      MP.forEach(p=>{votes[p]=p==='oth'?((parseFloat(row['oth_pct'])||0)+(parseFloat(row['rstr_pct'])||0)+(parseFloat(row['ind_pct'])||0))/100:(parseFloat(row[p+'_pct'])||0)/100;});
+      const defender=WM[(row['Winner']||'').trim()]||'oth';
+      const result=stm({region,votes,tac:inferTac(votes)});
+      DATA[code]={
+        name: row['Constituency name'],
+        region,
+        defender,
+        votes,
+        winner: result.winner,
+        margin: result.margin,
+        shares: result.shares,
+      };
+    });
+  }catch(e){console.warn('Results CSV failed:',e);}
+}
+
+// ============================================================
+// PANEL BUILDERS
+// ============================================================
+function chgClass(v){return v>0.05?'chg-pos':v<-0.05?'chg-neg':'chg-nil';}
+function chgStr(v){const s=Math.abs(v).toFixed(1);return v>0.05?'+'+s:v<-0.05?'\u2212'+s:'\u2014';}
+
+function stackedBarHTML(shares, cls){
+  return '<div class="stacked-bar '+cls+'">'+BAR_ORDER.filter(p=>(shares[p]||0)>0.005).map(p=>'<div style="width:'+((shares[p]||0)*100).toFixed(2)+'%;background:'+(PARTIES[p]?.color||'#ccc')+';height:100%;"></div>').join('')+'</div>';
+}
+
+function updateResultBar(d){
+  const winner=PARTIES[d.winner]||PARTIES.oth;
+  const incumbent=PARTIES[d.defender]||winner;
+  const held=d.winner===d.defender;
+  const label=held?winner.label+' hold':winner.label+' gain from '+incumbent.label;
+  document.getElementById('result-bar-incumbent').style.background=incumbent.color;
+  document.getElementById('result-bar-fill').style.background=winner.color;
+  document.getElementById('result-bar-text').textContent=label;
+}
+
+function buildPanelBody(d){
+  // projected shares sorted by size
+  const sorted=MP.filter(p=>(d.shares[p]||0)>0.005||(d.votes[p]||0)>0.005).sort((a,b)=>(d.shares[b]||0)-(d.shares[a]||0));
+  const max=(d.shares[sorted[0]]||0)*100||1;
+  const rows=sorted.map(p=>{
+    const proj=(d.shares[p]||0)*100;
+    const base=(d.votes[p]||0)*100;
+    const chg=proj-base;
+    const party=PARTIES[p]||PARTIES.oth;
+    return '<tr><td><div class="party-cell"><div class="party-stripe" style="background:'+party.color+';"></div><span class="party-name">'+party.label+'</span></div></td><td class="pct-cell">'+proj.toFixed(1)+'</td><td class="bar-cell"><div class="bar-track"><div class="bar-fill" style="width:'+(proj/max*100).toFixed(1)+'%;background:'+party.color+';"></div></div></td><td class="chg-cell '+chgClass(chg)+'">'+chgStr(chg)+'</td></tr>';
+  }).join('');
+
+  // Projected shares stacked bar + thin 2024 bar beneath
+  const prevShares={};MP.forEach(p=>{prevShares[p]=d.votes[p]||0;});
+  return '<div class="stacked-section"><div class="stacked-label">Result vs. 2024</div>'+stackedBarHTML(d.shares,'')+stackedBarHTML(prevShares,'previous')+'</div><table class="results-table"><thead><tr><th>Party</th><th>Pct.</th><th></th><th>Chg.</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+function showSidePanel(code){
+  const d=DATA[code];if(!d)return;
+  document.getElementById('panel-placeholder').style.display='none';
+  const inner=document.getElementById('panel-inner');inner.style.display='flex';inner.style.flexDirection='column';
+  updateResultBar(d);
+  document.getElementById('panel-header').innerHTML='<div class="con-name">'+d.name+'</div><div class="con-region">'+d.region+'</div>';
+  document.getElementById('panel-body').innerHTML=buildPanelBody(d);
+}
+
+let drawerExpanded=false;
+function dismissDrawer(){document.getElementById('drawer').style.transform='translateY(100%)';drawerExpanded=false;document.getElementById('drawer-body').style.display='none';document.getElementById('drawer-toggle').textContent='Details \u2191';}
+function showDrawer(code){
+  const d=DATA[code];if(!d)return;
+  const winner=PARTIES[d.winner]||PARTIES.oth, incumbent=PARTIES[d.defender]||winner, held=d.winner===d.defender;
+  document.getElementById('drawer-peek-incumbent').style.background=incumbent.color;
+  document.getElementById('drawer-peek-fill').style.background=winner.color;
+  document.getElementById('drawer-peek-label').textContent=held?winner.label+' hold':winner.label+' gain from '+incumbent.label;
+  document.getElementById('drawer-peek-name').textContent=d.name;
+  document.getElementById('drawer-body').innerHTML=buildPanelBody(d);
+  drawerExpanded=false;document.getElementById('drawer-body').style.display='none';document.getElementById('drawer-toggle').textContent='Details \u2191';
+  document.getElementById('drawer').style.transform='translateY(0)';
+}
+
+document.getElementById('drawer-toggle').addEventListener('click',()=>{drawerExpanded=!drawerExpanded;document.getElementById('drawer-body').style.display=drawerExpanded?'block':'none';document.getElementById('drawer-toggle').textContent=drawerExpanded?'Details \u2193':'Details \u2191';});
+document.getElementById('drawer-handle').addEventListener('click',()=>{if(document.getElementById('drawer').style.transform==='translateY(100%)')return;drawerExpanded=!drawerExpanded;document.getElementById('drawer-body').style.display=drawerExpanded?'block':'none';document.getElementById('drawer-toggle').textContent=drawerExpanded?'Details \u2193':'Details \u2191';});
+
+// ============================================================
+// MAP STYLE — MapLibre with OpenFreeMap vector tiles
+// ============================================================
+function buildColorMatch(){
+  const expr=['match',['get','PCON24CD']];
+  Object.entries(DATA).forEach(([code,d])=>{expr.push(code,PARTIES[d.winner]?.color||'#888780');});
+  // NI = grey
+  NI_CODES.forEach(c=>expr.push(c,'#c8c5be'));
+  expr.push('#cccccc');
+  return expr;
+}
+
+function buildMapStyle(geojsonData){
+  const colorMatch=buildColorMatch();
+  return{
+    version:8,
+    glyphs:'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+    sources:{
+      basemap:{type:'vector',url:'https://tiles.openfreemap.org/planet'},
+      cons:{type:'geojson',data:geojsonData,generateId:true},
+    },
+    layers:[
+      {id:'bg',type:'background',paint:{'background-color':'rgba(245,242,232,1)'}},
+      {id:'water',type:'fill',source:'basemap','source-layer':'water',paint:{'fill-color':'hsl(205,56%,73%)','fill-opacity':0.9}},
+      {id:'landcover-green',type:'fill',source:'basemap','source-layer':'landuse',filter:['in',['get','class'],['literal',['park','grass','cemetery','forest','meadow','nature_reserve']]],paint:{'fill-color':'hsl(82,46%,72%)','fill-opacity':0.5}},
+      {id:'landuse-residential',type:'fill',source:'basemap','source-layer':'landuse',filter:['in',['get','class'],['literal',['residential','suburb','neighbourhood']]],paint:{'fill-color':'rgba(222,211,190,1)','fill-opacity':0.45}},
+      {id:'road-path',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['path','track','service']]],paint:{'line-color':'rgba(200,195,185,1)','line-width':['interpolate',['linear'],['zoom'],13,0.4,17,1.2]}},
+      {id:'road-minor',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['minor','residential']]],paint:{'line-color':'rgba(210,205,192,1)','line-width':['interpolate',['linear'],['zoom'],11,0.4,15,2]}},
+      {id:'road-secondary',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['secondary','tertiary']]],paint:{'line-color':'rgba(200,193,178,1)','line-width':['interpolate',['linear'],['zoom'],9,0.5,14,3]}},
+      {id:'road-primary',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['primary']]],paint:{'line-color':'rgba(188,178,160,1)','line-width':['interpolate',['linear'],['zoom'],8,0.8,14,4]}},
+      {id:'road-motorway',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['motorway','trunk']]],paint:{'line-color':'rgba(175,165,145,1)','line-width':['interpolate',['linear'],['zoom'],6,1,14,5]}},
+      {id:'railway',type:'line',source:'basemap','source-layer':'transportation',filter:['==',['get','class'],'rail'],paint:{'line-color':'hsl(34,12%,66%)','line-width':1,'line-opacity':0.7}},
+      {id:'buildings',type:'fill',source:'basemap','source-layer':'building',minzoom:12,paint:{'fill-color':'rgba(185,176,169,1)','fill-opacity':0.9,'fill-outline-color':'rgba(165,156,148,1)'}},
+      // Constituency fills
+      {id:'cons-fill',type:'fill',source:'cons',paint:{'fill-color':colorMatch,'fill-opacity':0.55}},
+      {id:'cons-line',type:'line',source:'cons',paint:{'line-color':'#000000','line-width':0.6,'line-opacity':0.4}},
+      // Hover overlay (brightens)
+      {id:'cons-hover',type:'fill',source:'cons',paint:{'fill-color':colorMatch,'fill-opacity':['case',['boolean',['feature-state','hover'],false],0.3,0]}},
+      // Pinned outline
+      {id:'cons-pinned',type:'line',source:'cons',paint:{'line-color':'#111111','line-width':2,'line-opacity':['case',['boolean',['feature-state','pinned'],false],1,0]}},
+      // Place labels on top
+      {id:'place-labels',type:'symbol',source:'basemap','source-layer':'place',filter:['in',['get','class'],['literal',['city','town','suburb','village']]],layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-size':['interpolate',['linear'],['zoom'],9,10,13,14],'text-anchor':'center','text-max-width':8},paint:{'text-color':'hsl(0,0%,25%)','text-halo-color':'hsla(0,0%,100%,0.85)','text-halo-width':2}},
+    ],
+  };
+}
+
+// ============================================================
+// MAP INIT
+// ============================================================
+function initMap(geojsonData){
+  const container=document.getElementById('map-container');
+  const sidePanel=document.getElementById('side-panel');
+  const drawer=document.getElementById('drawer');
+  const pinEl=document.getElementById('pin-indicator');
+  let isWide=false,hoveredId=null,pinnedId=null;
+
+  function unpin(){
+    if(pinnedId!==null&&window._map)window._map.setFeatureState({source:'cons',id:pinnedId},{pinned:false});
+    pinnedId=null;pinEl.classList.remove('active');
+  }
+  pinEl.addEventListener('click',unpin);
+
+  function applyLayout(wide){
+    isWide=wide;
+    if(wide){
+      document.getElementById('map').style.width='calc(100% - 280px)';
+      sidePanel.style.display='flex';sidePanel.classList.add('is-visible');
+      drawer.classList.remove('drawer-enabled');dismissDrawer();unpin();
+    }else{
+      document.getElementById('map').style.width='100%';
+      sidePanel.style.display='none';sidePanel.classList.remove('is-visible');
+      drawer.classList.add('drawer-enabled');
+    }
+    if(window._map)window._map.resize();
+  }
+
+  applyLayout(container.offsetWidth>=660);
+
+  window._map=new maplibregl.Map({
+    container:'map',
+    style:buildMapStyle(geojsonData),
+    center:[-2.5,54.5],
+    zoom:5.2,
+    attributionControl:false,
+  });
+
+  const map=window._map;
+  map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-left');
+  map.addControl(new maplibregl.AttributionControl({compact:true}),'bottom-left');
+  map.on('error',e=>console.warn('MapLibre:',e.error?.message||e));
+
+  map.on('load',()=>{
+    // Fit to GB bounds
+    map.fitBounds([[-8.2,49.8],[1.8,60.9]],{padding:20,duration:0});
+
+    // Hover
+    map.on('mousemove','cons-fill',e=>{
+      if(!isWide||pinnedId!==null)return;
+      map.getCanvas().style.cursor='pointer';
+      if(e.features.length>0){
+        const fid=e.features[0].id,code=e.features[0].properties.PCON24CD;
+        if(NI_CODES.has(code))return;
+        if(hoveredId!==null&&hoveredId!==fid)map.setFeatureState({source:'cons',id:hoveredId},{hover:false});
+        hoveredId=fid;map.setFeatureState({source:'cons',id:hoveredId},{hover:true});
+        showSidePanel(code);
+      }
+    });
+
+    map.on('mouseleave','cons-fill',()=>{
+      if(!isWide||pinnedId!==null)return;
+      map.getCanvas().style.cursor='';
+      if(hoveredId!==null){map.setFeatureState({source:'cons',id:hoveredId},{hover:false});hoveredId=null;}
+    });
+
+    // Click to pin
+    map.on('click',e=>{
+      const features=map.queryRenderedFeatures(e.point,{layers:['cons-fill']});
+      if(!features.length){unpin();return;}
+      const fid=features[0].id,code=features[0].properties.PCON24CD;
+      if(NI_CODES.has(code))return;
+      const d=DATA[code];
+      if(isWide){
+        if(pinnedId===fid){unpin();return;}
+        if(pinnedId!==null)map.setFeatureState({source:'cons',id:pinnedId},{pinned:false});
+        if(hoveredId!==null){map.setFeatureState({source:'cons',id:hoveredId},{hover:false});hoveredId=null;}
+        pinnedId=fid;map.setFeatureState({source:'cons',id:pinnedId},{pinned:true});
+        showSidePanel(code);
+        if(d){const p=PARTIES[d.winner]||PARTIES.oth;document.getElementById('pin-dot').style.background=p.color;document.getElementById('pin-name').textContent=d.name;pinEl.classList.add('active');}
+      }else{
+        showDrawer(code);
+      }
+    });
+  });
+
+  initSearch(geojsonData,map,()=>isWide);
+  initChoropleth(map);
+
+  const ro=new ResizeObserver(entries=>{const w=entries[0].contentRect.width;const nowWide=w>=660;if(nowWide!==isWide)applyLayout(nowWide);});
+  ro.observe(container);
+}
+
+// ============================================================
+// CHOROPLETH
+// ============================================================
+function hexToRgb(hex){return[parseInt(hex.slice(1,3),16),parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)];}
+
+function buildChoroplethExpr(partyKey,ceiling){
+  const [r,g,b]=hexToRgb(PARTIES[partyKey].color);
+  const matchExpr=['match',['get','PCON24CD']];
+  Object.entries(DATA).forEach(([code,d])=>{matchExpr.push(code,Math.min((d.shares[partyKey]||0)*100,ceiling));});
+  matchExpr.push(0);
+  return['interpolate',['linear'],matchExpr,0,'rgba(245,245,245,1)',ceiling,'rgba('+r+','+g+','+b+',1)'];
+}
+
+function initChoropleth(map){
+  const modeBtns=document.querySelectorAll('.vc-btn[data-mode]');
+  const partyWrap=document.getElementById('party-select-wrap');
+  const partySelect=document.getElementById('party-select');
+  const legend=document.getElementById('choropleth-legend');
+  const legendGrad=document.getElementById('legend-gradient');
+  const legendMax=document.getElementById('legend-max');
+  const legendTitle=document.getElementById('legend-title');
+  let currentMode='winner',currentParty='lab';
+
+  Object.entries(PARTIES).forEach(([key,p])=>{const opt=document.createElement('option');opt.value=key;opt.textContent=p.label;partySelect.appendChild(opt);});
+  partySelect.value=currentParty;
+
+  function getWinnerExpr(){const e=['match',['get','PCON24CD']];Object.entries(DATA).forEach(([code,d])=>{e.push(code,PARTIES[d.winner]?.color||'#cccccc');});NI_CODES.forEach(c=>e.push(c,'#c8c5be'));e.push('#cccccc');return e;}
+
+  function applyMode(mode,party){
+    currentMode=mode;currentParty=party;
+    if(mode==='winner'){
+      map.setPaintProperty('cons-fill','fill-color',getWinnerExpr());
+      map.setPaintProperty('cons-fill','fill-opacity',0.55);
+      map.setPaintProperty('cons-hover','fill-color',getWinnerExpr());
+      partyWrap.classList.remove('visible');legend.classList.remove('visible');
+    }else{
+      const ceiling=CHOROPLETH_CEILINGS[party]||50;
+      const expr=buildChoroplethExpr(party,ceiling);
+      map.setPaintProperty('cons-fill','fill-color',expr);
+      map.setPaintProperty('cons-fill','fill-opacity',0.85);
+      map.setPaintProperty('cons-hover','fill-color',expr);
+      partyWrap.classList.add('visible');
+      const p=PARTIES[party];
+      legendTitle.textContent=p.label+' vote share';
+      legendGrad.style.background='linear-gradient(to right,#f5f5f5,'+p.color+')';
+      legendMax.textContent=ceiling+'%+';
+      legend.classList.add('visible');
+    }
+  }
+
+  modeBtns.forEach(btn=>{btn.addEventListener('click',()=>{modeBtns.forEach(b=>b.classList.remove('active'));btn.classList.add('active');applyMode(btn.dataset.mode,currentParty);});});
+  partySelect.addEventListener('change',()=>applyMode(currentMode,partySelect.value));
+}
+
+// ============================================================
+// SEARCH
+// ============================================================
+function initSearch(geojsonData,map,isWideFn){
+  const input=document.getElementById('search-input');
+  const results=document.getElementById('search-results');
+
+  const boundsByCode={};
+  geojsonData.features.forEach(f=>{
+    const code=f.properties?.PCON24CD;if(!code||!f.geometry)return;
+    const coords=f.geometry.type==='Polygon'?f.geometry.coordinates[0]:f.geometry.coordinates.flat(2);
+    if(!coords.length)return;
+    const lngs=coords.map(c=>c[0]),lats=coords.map(c=>c[1]);
+    boundsByCode[code]=[[lngs.reduce((a,b)=>Math.min(a,b)),lats.reduce((a,b)=>Math.min(a,b))],[lngs.reduce((a,b)=>Math.max(a,b)),lats.reduce((a,b)=>Math.max(a,b))]];
+  });
+
+  const entries=Object.entries(DATA).map(([code,d])=>({code,name:d.name||code,region:d.region||'',winner:d.winner,searchStr:(d.name+' '+(d.region||'')).toLowerCase()}));
+
+  function closeResults(){results.classList.remove('open');results.innerHTML='';}
+
+  function selectEntry(entry){
+    input.value=entry.name;closeResults();
+    const bounds=boundsByCode[entry.code];
+    if(bounds&&map)map.fitBounds(bounds,{padding:80,maxZoom:10,duration:600});
+    if(isWideFn())showSidePanel(entry.code);else showDrawer(entry.code);
+  }
+
+  input.addEventListener('input',()=>{
+    const q=input.value.trim().toLowerCase();if(q.length<2){closeResults();return;}
+    const matches=entries.filter(e=>e.searchStr.includes(q)).slice(0,8);
+    if(!matches.length){results.innerHTML='<div class="search-no-results">No results found</div>';results.classList.add('open');return;}
+    results.innerHTML=matches.map(e=>{const p=PARTIES[e.winner]||PARTIES.oth;const name=e.name.replace(new RegExp(q,'gi'),m=>'<strong>'+m+'</strong>');return'<div class="search-result-item" data-code="'+e.code+'"><div class="search-result-dot" style="background:'+p.color+';"></div><div class="search-result-text"><div class="search-result-ward">'+name+'</div><div class="search-result-council">'+e.region+'</div></div></div>';}).join('');
+    results.classList.add('open');
+    results.querySelectorAll('.search-result-item').forEach(el=>{el.addEventListener('click',()=>{const entry=entries.find(e=>e.code===el.dataset.code);if(entry)selectEntry(entry);});});
+  });
+
+  document.addEventListener('click',e=>{if(!document.getElementById('search-wrap').contains(e.target))closeResults();});
+  input.addEventListener('keydown',e=>{if(e.key==='Escape'){closeResults();input.blur();}if(e.key==='Enter'){const first=results.querySelector('.search-result-item');if(first)first.click();}});
+}
+
+// ============================================================
+// FORECAST UPDATE (from iframe 2 via parent relay)
+// ============================================================
+window.addEventListener('message',e=>{
+  if(!e.data||e.data.action!=='forecastUpdate'||!e.data.seats)return;
+  e.data.seats.forEach(s=>{
+    if(DATA[s.code]){DATA[s.code].winner=s.winner;DATA[s.code].margin=s.margin;DATA[s.code].shares=s.shares;}
+  });
+  // Recolour the map
+  if(window._map&&window._map.isStyleLoaded()){
+    const expr=buildColorMatch();
+    window._map.setPaintProperty('cons-fill','fill-color',expr);
+    window._map.setPaintProperty('cons-hover','fill-color',expr);
+  }
+  document.getElementById('live-badge').style.display='';
+});
+
+// ============================================================
+// BOOTSTRAP
+// ============================================================
+async function bootstrap(){
+  await loadData();
+
+  // Try to fetch GeoJSON with proxy fallback
+  let geojsonData=null;
+  const proxies=[u=>u,u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?'+encodeURIComponent(u)];
+  for(const proxy of proxies){
+    try{
+      const r=await fetch(proxy(GEO_URL),{signal:AbortSignal.timeout(20000)});
+      if(r.ok){const t=await r.text();if(t.length>1000){geojsonData=JSON.parse(t);break;}}
+    }catch(e){}
+  }
+
+  if(!geojsonData){
+    document.getElementById('map').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:#aaa;text-align:center;padding:24px;">Map loads when hosted on GitHub Pages.<br>CORS restriction prevents loading in sandbox preview.</div>';
+    return;
+  }
+
+  // Filter out NI from GeoJSON (greyed via colour match but still present for context)
+  initMap(geojsonData);
+}
+
+bootstrap();
+</script>
+</body>
+</html>
