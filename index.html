@@ -1,4 +1,4 @@
-<!-- Iframe 1: Forecast header -->
+<!-- Iframe 1: Auto-run forecast header -->
 <iframe src="https://glasgow46239.github.io/britainpredicts/iframe1_forecast_header.html"
   width="100%" height="480" frameborder="0" scrolling="no"></iframe>
 
@@ -6,19 +6,18 @@
 
 <!-- Iframe 2: Calculator -->
 <iframe src="https://glasgow46239.github.io/britainpredicts/iframe2_calculator.html"
-  id="calculator-iframe" width="100%" height="620" frameborder="0" scrolling="no"></iframe>
+  id="calculator-iframe" width="100%" height="580" frameborder="0" scrolling="no"></iframe>
 
-<!-- Iframe 3: Map + list -->
+<!-- Iframe 3: Map -->
 <iframe src="https://glasgow46239.github.io/britainpredicts/iframe3_map.html"
-  width="100%" height="600" frameborder="0" scrolling="no"></iframe>
+  id="map-iframe" width="100%" height="600" frameborder="0" scrolling="no"></iframe>
 
+<!-- Communication script — handles scroll + forecast relay -->
 <script>
 window.addEventListener('message', function(e) {
-  // Scroll to calculator
   if (e.data && e.data.action === 'scrollToCalculator') {
     document.getElementById('calculator-iframe').scrollIntoView({ behavior: 'smooth' });
   }
-  // Relay forecast updates from iframe 2 to iframe 3
   if (e.data && e.data.action === 'forecastUpdate') {
     var mapFrame = document.getElementById('map-iframe');
     if (mapFrame) mapFrame.contentWindow.postMessage(e.data, '*');
