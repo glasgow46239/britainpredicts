@@ -6,81 +6,68 @@
 <title>Britain Predicts — Forecast Header</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&family=Roboto+Condensed:wght@700;900&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --con: #0087DC; --lab: #E4003B; --ldem: #FAA61A; --grn: #02A95B;
-    --snp: #C8A400; --pc: #3F8428; --ref: #12B6CF; --oth: #57534e;
-  }
-  body { font-family: 'Roboto', sans-serif; background: #f8f7f4; padding: 0; margin: 0; }
-
-  .masthead { background: #111; padding: 14px 20px 12px; display: flex; align-items: baseline; gap: 10px; }
-  .masthead-label { font-family: 'Roboto Condensed', sans-serif; font-weight: 900; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.5); }
-  .masthead-title { font-family: 'Roboto Condensed', sans-serif; font-weight: 900; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: #fff; }
-  .masthead-updated { margin-left: auto; font-size: 10px; color: rgba(255,255,255,0.4); }
-
-  .seats-bar-wrap { background: #111; padding: 0 20px 14px; }
-  .seats-bar { display: flex; height: 5px; overflow: hidden; gap: 1px; }
-  .sb-seg { min-width: 1px; }
-
-  .call-strip { background: #1a1a1a; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; }
-  .call-text { font-family: 'Roboto Condensed', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; color: #fff; }
-  .call-scope { font-size: 10px; color: rgba(255,255,255,0.3); }
-
-  .party-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; padding: 3px; background: #e8e5e0; }
-  .party-tile { position: relative; padding: 18px 16px 16px; overflow: hidden; cursor: default; transition: filter 0.15s, opacity 0.4s ease, transform 0.4s ease; opacity: 0; transform: translateY(8px); }
-  .party-tile:hover { filter: brightness(1.06); }
-  .party-tile.visible { opacity: 1; transform: translateY(0); }
-  .tile-party { font-family: 'Roboto Condensed', sans-serif; font-weight: 900; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.85); margin-bottom: 6px; }
-  .tile-seats { font-family: 'Roboto Condensed', sans-serif; font-weight: 900; font-size: 54px; line-height: 1; color: #fff; letter-spacing: -0.02em; margin-bottom: 6px; text-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-  .tile-change { font-family: 'Roboto Condensed', sans-serif; font-weight: 700; font-size: 14px; color: rgba(255,255,255,0.75); display: flex; align-items: center; gap: 3px; }
-  .tile-change.gain { color: rgba(255,255,255,0.95); }
-  .tile-change.loss { color: rgba(255,255,255,0.6); }
-  .tile-change.flat { color: rgba(255,255,255,0.5); }
-  .tile-accent { position: absolute; right: -20px; bottom: -20px; width: 80px; height: 80px; background: rgba(255,255,255,0.06); border-radius: 50%; }
-
-  .tabs-wrap { padding: 3px; background: #e8e5e0; }
-  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
-  .tab-btn { font-family: 'Roboto Condensed', sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; padding: 13px 16px; border: none; cursor: pointer; background: #ddd8d0; color: #666; transition: all 0.2s; }
-  .tab-btn.active { background: #111; color: #fff; }
-  .tab-btn:not(.active):hover { background: #ccc8c0; color: #333; }
-  .tab-arrow { display: inline-block; margin-left: 6px; opacity: 0.6; font-size: 10px; }
-
-  .loading-overlay { position: fixed; inset: 0; background: #111; display: flex; align-items: center; justify-content: center; z-index: 100; transition: opacity 0.4s; }
-  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
-  .loading-dots { display: flex; gap: 6px; }
-  .loading-dots span { width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: blink 1.2s infinite; opacity: 0.3; }
-  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes blink { 0%,80%,100%{opacity:0.3} 40%{opacity:1} }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Roboto',sans-serif;background:#f8f7f4;margin:0;}
+.masthead{background:#111;padding:14px 20px 12px;display:flex;align-items:baseline;gap:10px;}
+.masthead-label{font-family:'Roboto Condensed',sans-serif;font-weight:900;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);}
+.masthead-title{font-family:'Roboto Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#fff;}
+.masthead-updated{margin-left:auto;font-size:10px;color:rgba(255,255,255,.4);}
+.seats-bar-wrap{background:#111;padding:0 20px 14px;}
+.seats-bar{display:flex;height:5px;overflow:hidden;gap:1px;}
+.sb-seg{min-width:1px;}
+.call-strip{background:#1a1a1a;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;}
+.call-text{font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:#fff;}
+.call-scope{font-size:10px;color:rgba(255,255,255,.3);}
+.party-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:3px;background:#e8e5e0;}
+.party-tile{position:relative;padding:18px 16px 16px;overflow:hidden;cursor:default;transition:filter .15s,opacity .4s ease,transform .4s ease;opacity:0;transform:translateY(8px);}
+.party-tile:hover{filter:brightness(1.06);}
+.party-tile.visible{opacity:1;transform:translateY(0);}
+.tile-party{font-family:'Roboto Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.85);margin-bottom:6px;text-align:right;}
+.tile-seats{font-family:'Roboto Condensed',sans-serif;font-weight:900;font-size:54px;line-height:1;color:#fff;letter-spacing:-.02em;margin-bottom:6px;text-align:right;}
+.tile-change{font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:14px;color:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:flex-end;gap:3px;}
+.tile-change.gain{color:rgba(255,255,255,.95);}
+.tile-change.loss{color:rgba(255,255,255,.6);}
+.tile-change.flat{color:rgba(255,255,255,.5);}
+.tabs-wrap{padding:3px;background:#e8e5e0;}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:3px;}
+.tab-btn{font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:13px 16px;border:none;cursor:pointer;background:#ddd8d0;color:#666;transition:all .2s;}
+.tab-btn.active{background:#111;color:#fff;}
+.tab-btn:not(.active):hover{background:#ccc8c0;color:#333;}
+.tab-arrow{display:inline-block;margin-left:6px;opacity:.6;font-size:10px;}
+.loading-overlay{position:fixed;inset:0;background:#111;display:flex;align-items:center;justify-content:center;z-index:100;transition:opacity .4s;}
+.loading-overlay.hidden{opacity:0;pointer-events:none;}
+.loading-dots{display:flex;gap:6px;}
+.loading-dots span{width:6px;height:6px;border-radius:50%;background:#fff;animation:blink 1.2s infinite;opacity:.3;}
+.loading-dots span:nth-child(2){animation-delay:.2s;}
+.loading-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes blink{0%,80%,100%{opacity:.3}40%{opacity:1}}
 </style>
 </head>
 <body>
-<div class="loading-overlay" id="loader">
-  <div class="loading-dots"><span></span><span></span><span></span></div>
-</div>
+<div class="loading-overlay" id="loader"><div class="loading-dots"><span></span><span></span><span></span></div></div>
 <div class="masthead">
   <span class="masthead-label">Britain Predicts</span>
   <span class="masthead-title">General Election Forecast</span>
   <span class="masthead-updated" id="updated-date"></span>
 </div>
-<div class="seats-bar-wrap">
-  <div class="seats-bar" id="seats-bar"></div>
-</div>
+<div class="seats-bar-wrap"><div class="seats-bar" id="seats-bar"></div></div>
 <div class="call-strip">
-  <span class="call-text" id="call-text">Calculating…</span>
-  <span class="call-scope">632 GB seats · NI projection coming soon</span>
+  <span class="call-text" id="call-text">Calculating&hellip;</span>
+  <span class="call-scope">632 GB seats &middot; NI projection coming soon</span>
 </div>
 <div class="party-grid" id="party-grid"></div>
 <div class="tabs-wrap">
   <div class="tabs">
-    <button class="tab-btn active" id="tab-forecast">Our forecast <span class="tab-arrow">↓</span></button>
-    <button class="tab-btn" id="tab-own" onclick="scrollToOwn()">Create your own <span class="tab-arrow">↓</span></button>
+    <button class="tab-btn active">Our forecast <span class="tab-arrow">&darr;</span></button>
+    <button class="tab-btn" onclick="scrollToOwn()">Create your own <span class="tab-arrow">&darr;</span></button>
   </div>
 </div>
 <script>
 const PC={con:'#0087DC',lab:'#E4003B',ldem:'#FAA61A',grn:'#02A95B',snp:'#C8A400',pc:'#3F8428',ref:'#12B6CF',oth:'#57534e'};
 const PL={con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Reform',oth:'Oth'};
 const MP=['con','lab','ldem','grn','snp','pc','ref','oth'];
+const BAR_ORDER=['grn','lab','snp','pc','ldem','oth','con','ref'];
+const TILE_ORDER=['grn','lab','snp','pc','ldem','oth','con','ref'];
 const WM={'Con':'con','Lab':'lab','LDem':'ldem','LD':'ldem','Grn':'grn','Green':'grn','SNP':'snp','PC':'pc','Reform':'ref','Ref':'ref','Ind':'oth','Other':'oth','Oth':'oth','Alba':'oth','Speaker':'oth','SDLP':'oth','UUP':'oth','DUP':'oth','SF':'oth','Alliance':'oth','APNI':'oth','TUV':'oth','RSTR':'oth','Restore':'oth'};
 const BN={con:23.7,lab:33.7,ldem:12.2,grn:6.7,snp:2.5,pc:0.7,ref:14.3,oth:6.2};
 const BS={con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
@@ -89,58 +76,34 @@ const POLL_REG={Scotland:{con:10.3,lab:17.3,ldem:9.0,grn:7.9,snp:32.4,pc:0,ref:2
 function initDeltas(){const d={};Object.keys(POLL_REG).forEach(r=>{d[r]={};MP.forEach(p=>{d[r][p]=(POLL_REG[r][p]||0)-(POLL_NAT[p]||0);});});return d;}
 const national={...POLL_NAT},deltas=initDeltas();
 function effShare(region,p){if(!POLL_REG[region])return national[p]||0;return Math.max(0,(national[p]||0)+((deltas[region]||{})[p]||0));}
-
-// Fetch live polling from GitHub, fall back to baked data
-const POLLING_URL='https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/polling.csv';
-const RESULTS_URL='https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv';
-
-function parseCSV(t){const lines=t.trim().split('\n'),h=lines[0].split(',');return lines.slice(1).filter(l=>l.trim()).map(l=>{const c=l.split(','),o={};h.forEach((k,i)=>o[k.trim()]=(c[i]||'').trim());return o;});}
+function parseCSVRow(l){const r=[];let c='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(ch==='"'){q=!q;}else if(ch===','&&!q){r.push(c.trim());c='';}else{c+=ch;}}r.push(c.trim());return r;}
+function parseCSV(t){const lines=t.trim().split('\n'),h=parseCSVRow(lines[0]);return lines.slice(1).filter(l=>l.trim()).map(l=>{const c=parseCSVRow(l),o={};h.forEach((k,i)=>o[k.trim()]=(c[i]||'').trim());return o;});}
 function inferTac(v){const s=MP.filter(p=>(v[p]||0)>0.03).sort((a,b)=>(v[b]||0)-(v[a]||0));const[f,sc]=s;if(!sc)return null;const pr=new Set([f,sc]);if(pr.has('lab')&&pr.has('ref'))return'lab_ref';if(pr.has('ldem')&&pr.has('con'))return'ldem_con';if(pr.has('grn')&&pr.has('lab'))return'grn_lab';return null;}
-function stm(seat){const thr=0.20,base=seat.votes,newN={},baseN={};MP.forEach(p=>{newN[p]=effShare(seat.region,p)/100;baseN[p]=(BN[p]||0)/100;});const sw={};MP.forEach(p=>{sw[p]=newN[p]-baseN[p];});const pr={};MP.forEach(p=>{const loc=base[p]||0,s=sw[p]||0;pr[p]=loc>=thr?Math.max(0,loc+s*Math.max(0,1-loc)*2):Math.max(0,loc*(1-Math.min(1,s<0?Math.abs(s)*2:0)));});const t=seat.tac;if(t==='lab_ref'){const ga=(pr.grn||0)*0.10,la=(pr.ldem||0)*0.08;pr.grn=Math.max(0,(pr.grn||0)-ga);pr.ldem=Math.max(0,(pr.ldem||0)-la);pr.lab=(pr.lab||0)+ga+la;}else if(t==='ldem_con'){const ga=(pr.grn||0)*0.12,la=(pr.lab||0)*0.15;pr.grn=Math.max(0,(pr.grn||0)-ga);pr.lab=Math.max(0,(pr.lab||0)-la);pr.ldem=(pr.ldem||0)+ga+la;}else if(t==='grn_lab'){const la=(pr.ldem||0)*0.10;pr.ldem=Math.max(0,(pr.ldem||0)-la);pr.grn=(pr.grn||0)+la;}const tot=Object.values(pr).reduce((a,b)=>a+b,0);if(tot>0)MP.forEach(p=>pr[p]=(pr[p]||0)/tot);const sorted=MP.slice().sort((a,b)=>(pr[b]||0)-(pr[a]||0));return sorted[0];}
-
+function stm(seat){const thr=0.20,base=seat.votes,newN={},baseN={};MP.forEach(p=>{newN[p]=effShare(seat.region,p)/100;baseN[p]=(BN[p]||0)/100;});const sw={};MP.forEach(p=>{sw[p]=newN[p]-baseN[p];});const pr={};MP.forEach(p=>{const loc=base[p]||0,s=sw[p]||0;pr[p]=loc>=thr?Math.max(0,loc+s*Math.max(0,1-loc)*2):Math.max(0,loc*(1-Math.min(1,s<0?Math.abs(s)*2:0)));});const t=seat.tac;if(t==='lab_ref'){const ga=(pr.grn||0)*.10,la=(pr.ldem||0)*.08;pr.grn=Math.max(0,(pr.grn||0)-ga);pr.ldem=Math.max(0,(pr.ldem||0)-la);pr.lab=(pr.lab||0)+ga+la;}else if(t==='ldem_con'){const ga=(pr.grn||0)*.12,la=(pr.lab||0)*.15;pr.grn=Math.max(0,(pr.grn||0)-ga);pr.lab=Math.max(0,(pr.lab||0)-la);pr.ldem=(pr.ldem||0)+ga+la;}else if(t==='grn_lab'){const la=(pr.ldem||0)*.10;pr.ldem=Math.max(0,(pr.ldem||0)-la);pr.grn=(pr.grn||0)+la;}const tot=Object.values(pr).reduce((a,b)=>a+b,0);if(tot>0)MP.forEach(p=>pr[p]=(pr[p]||0)/tot);const sorted=MP.slice().sort((a,b)=>(pr[b]||0)-(pr[a]||0));return sorted[0];}
 function runForecast(rows){const counts={};MP.forEach(p=>counts[p]=0);rows.forEach(r=>{const region=(r['Region']||'').trim();if(!region||region==='Northern Ireland')return;const votes={};MP.forEach(p=>{votes[p]=p==='oth'?((parseFloat(r['oth_pct'])||0)+(parseFloat(r['rstr_pct'])||0)+(parseFloat(r['ind_pct'])||0))/100:(parseFloat(r[p+'_pct'])||0)/100;});const winner=stm({region,votes,tac:inferTac(votes)});counts[winner]=(counts[winner]||0)+1;});return counts;}
-
 function renderHeader(counts){
   const total=Object.values(counts).reduce((a,b)=>a+b,0),maj=Math.floor(total/2)+1,labS=counts.lab||0,conS=counts.con||0;
-  document.getElementById('seats-bar').innerHTML=['lab','con','ref','ldem','grn','snp','pc','oth'].filter(p=>(counts[p]||0)>0).map(p=>`<div class="sb-seg" style="width:${((counts[p]||0)/total*100).toFixed(2)}%;background:${PC[p]};"></div>`).join('');
-  let call=labS>=maj?`Labour majority of ${(labS-maj)*2+1}`:labS>=maj-30?`Labour short of majority by ${maj-labS}`:`Hung parliament — largest: ${labS>=conS?'Lab':'Con'} (${Math.max(labS,conS)})`;
+  document.getElementById('seats-bar').innerHTML=BAR_ORDER.filter(p=>(counts[p]||0)>0).map(p=>'<div class="sb-seg" style="width:'+((counts[p]||0)/total*100).toFixed(2)+'%;background:'+PC[p]+';"></div>').join('');
+  const call=labS>=maj?'Labour majority of '+((labS-maj)*2+1):labS>=maj-30?'Labour short of majority by '+(maj-labS):'Hung parliament \u2014 largest: '+(labS>=conS?'Lab':'Con')+' ('+Math.max(labS,conS)+')';
   document.getElementById('call-text').textContent=call;
   document.getElementById('updated-date').textContent='Updated '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
-  const grid=document.getElementById('party-grid');
-  grid.innerHTML='';
-  ['con','lab','ldem','ref','grn','snp','pc','oth'].forEach((p,i)=>{
-    const seats=counts[p]||0,base=BS[p]||0,diff=seats-base,cls=diff>0?'gain':diff<0?'loss':'flat',arrow=diff>0?'▲':diff<0?'▼':'—';
-    const tile=document.createElement('div');tile.className='party-tile';tile.style.background=PC[p];tile.style.transitionDelay=`${i*60}ms`;
-    tile.innerHTML=`<div class="tile-party">${PL[p]}</div><div class="tile-seats">${seats}</div><div class="tile-change ${cls}"><span>${arrow}</span><span>${Math.abs(diff)} vs 2024</span></div><div class="tile-accent"></div>`;
-    grid.appendChild(tile);
-    setTimeout(()=>tile.classList.add('visible'),50+i*60);
+  const grid=document.getElementById('party-grid');grid.innerHTML='';
+  TILE_ORDER.forEach((p,i)=>{
+    const seats=counts[p]||0,diff=seats-(BS[p]||0),cls=diff>0?'gain':diff<0?'loss':'flat',arrow=diff>0?'\u25b2':diff<0?'\u25bc':'\u2014';
+    const tile=document.createElement('div');tile.className='party-tile';tile.style.background=PC[p];tile.style.transitionDelay=(i*60)+'ms';
+    tile.innerHTML='<div class="tile-party">'+PL[p]+'</div><div class="tile-seats">'+seats+'</div><div class="tile-change '+cls+'"><span>'+arrow+'</span><span>'+Math.abs(diff)+' vs 2024</span></div>';
+    grid.appendChild(tile);setTimeout(()=>tile.classList.add('visible'),50+i*60);
   });
 }
-
 function scrollToOwn(){try{window.parent.postMessage({action:'scrollToCalculator'},'*');}catch(e){}}
-
 async function init(){
   let rows=null;
-  try{const r=await fetch(RESULTS_URL);if(r.ok){const t=await r.text();rows=parseCSV(t);}}catch(e){}
-  // Fallback to baked CSV if fetch fails
-  if(!rows||!rows.length){
-    // Use inline baked data (abbreviated — full version in repository)
-    rows=parseCSV(BAKED_CSV);
-  }
+  try{const r=await fetch('https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv');if(r.ok){const t=await r.text();rows=parseCSV(t);}}catch(e){}
+  if(!rows||!rows.length)return;
   const counts=runForecast(rows);
   renderHeader(counts);
-  const loader=document.getElementById('loader');
-  loader.classList.add('hidden');
-  setTimeout(()=>loader.remove(),500);
+  const loader=document.getElementById('loader');loader.classList.add('hidden');setTimeout(()=>loader.remove(),500);
 }
-
-// Baked CSV fallback (full 632-constituency data — truncated here for brevity, full version in repo)
-const BAKED_CSV=`PCON24CD,Constituency name,Region,Winner,con_pct,lab_pct,ldem_pct,grn_pct,snp_pct,pc_pct,ref_pct,rstr_pct,ind_pct,oth_pct
-W07000081,Aberafan Maesteg,Wales,Lab,8.1,49.9,2.6,3.1,0.0,13.2,20.9,0.0,1.7,0.5
-S14000060,Aberdeen North,Scotland,SNP,14.0,30.3,6.1,3.0,34.5,0.0,9.0,0.0,0.0,3.0
-E14001063,Aldershot,Southern England,Lab,29.0,40.7,8.3,4.4,0.0,0.0,16.9,0.0,0.0,0.6
-E14001064,Aldridge-Brownhills,Midlands,Con,38.9,28.4,4.3,4.3,0.0,0.0,24.2,0.0,0.0,0.0`;
-
 window.addEventListener('load',()=>setTimeout(init,400));
 </script>
 </body>
