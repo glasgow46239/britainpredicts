@@ -14,7 +14,7 @@ jobs:
           curl -L "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=0&single=true&output=csv" -o polling.csv
       - name: Fetch results data  
         run: |
-          curl -L "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=774534693&single=true&output=csv" -o results_2024.csv
+          curl -L "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=888442617&single=true&output=csv" -o results_2024.csv
       - name: Commit and push
         run: |
           git config user.name "github-actions"
