@@ -1,166 +1,255 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Britain Predicts &mdash; Create Your Own Forecast</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Condensed:wght@700;900&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Britain Predicts — Calculator</title>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root{--con:#0087DC;--lab:#E4003B;--ldem:#FAA61A;--grn:#02A95B;--snp:#C8A400;--pc:#3F8428;--ref:#12B6CF;--oth:#57534e;}
-body{font-family:'Roboto',sans-serif;background:#f8f7f4;margin:0;}
-.masthead{background:#111;padding:12px 20px;display:flex;align-items:baseline;gap:10px;}
-.masthead-label{font-family:'Roboto Condensed',sans-serif;font-weight:900;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.45);}
-.masthead-title{font-family:'Roboto Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#fff;}
-.masthead-sub{margin-left:auto;font-size:10px;color:rgba(255,255,255,.35);}
-.controls-wrap{background:#1a1a1a;padding:14px 20px 16px;}
-.region-tabs{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:12px;}
-.rtab{font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:2px;border:1px solid rgba(255,255,255,.15);background:transparent;color:rgba(255,255,255,.45);cursor:pointer;transition:all .15s;}
-.rtab:hover{color:rgba(255,255,255,.8);border-color:rgba(255,255,255,.4);}
-.rtab.on{background:#fff;color:#111;border-color:#fff;}
-.rtab.adj{border-color:var(--ref);color:var(--ref);}
-.reg-note{display:flex;align-items:center;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.3);margin-bottom:10px;}
-.reset-btn{font-size:9px;padding:1px 8px;border-radius:2px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.4);cursor:pointer;}
-.reset-btn:hover{color:#fff;border-color:rgba(255,255,255,.6);}
-.section-lbl{font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:8px;}
-.party-grid-inputs{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:10px;}
-.pi-cell{display:flex;flex-direction:column;gap:3px;}
-.pi-dot-name{display:flex;align-items:center;gap:4px;}
-.pi-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.pi-name{font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:10px;color:rgba(255,255,255,.7);}
-.pi-input-row{display:flex;align-items:center;background:rgba(255,255,255,.08);border-radius:3px;border:1px solid rgba(255,255,255,.12);overflow:hidden;}
-.pi-input-row:focus-within{border-color:rgba(255,255,255,.45);}
-.pi-input{flex:1;background:transparent;border:none;outline:none;color:#fff;font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:14px;padding:5px 4px;text-align:right;min-width:0;-moz-appearance:textfield;}
-.pi-input::-webkit-outer-spin-button,.pi-input::-webkit-inner-spin-button{-webkit-appearance:none;}
-.pi-pct{font-size:10px;color:rgba(255,255,255,.35);padding:0 5px 0 1px;}
-.pi-nudge{display:flex;flex-direction:column;}
-.pi-nudge button{font-size:7px;line-height:1;width:13px;height:12px;border:none;background:rgba(255,255,255,.1);color:rgba(255,255,255,.5);cursor:pointer;display:flex;align-items:center;justify-content:center;}
-.pi-nudge button:hover{background:rgba(255,255,255,.2);color:#fff;}
-.pi-eff{font-size:9px;color:rgba(255,255,255,.25);text-align:right;}
-.pi-eff .pos{color:#4ade80;}
-.pi-eff .neg{color:#f87171;}
-.controls-bottom{display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
-.total-row{display:flex;align-items:center;gap:8px;}
-.total-lbl{font-size:11px;color:rgba(255,255,255,.5);}
-.total-val{font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:13px;color:#fff;}
-.total-val.warn{color:#f87171;}
-.total-val.ok{color:#4ade80;}
-.norm-btn{font-size:9px;padding:2px 8px;border-radius:2px;border:1px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.3);cursor:pointer;pointer-events:none;opacity:.4;}
-.norm-btn.active{opacity:1;pointer-events:auto;color:rgba(255,255,255,.8);border-color:rgba(255,255,255,.5);}
-.thr-row{display:flex;align-items:center;gap:6px;}
-.thr-lbl{font-size:10px;color:rgba(255,255,255,.4);}
-.thr-input{width:40px;font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:12px;padding:3px 5px;border:1px solid rgba(255,255,255,.15);border-radius:3px;background:rgba(255,255,255,.07);color:#fff;text-align:right;-moz-appearance:textfield;}
-.thr-input::-webkit-outer-spin-button,.thr-input::-webkit-inner-spin-button{-webkit-appearance:none;}
-.thr-pct{font-size:10px;color:rgba(255,255,255,.35);}
-.run-btn{margin-left:auto;padding:9px 24px;font-family:'Roboto Condensed',sans-serif;font-weight:900;font-size:13px;letter-spacing:.1em;text-transform:uppercase;background:#fff;color:#111;border:none;cursor:pointer;border-radius:2px;transition:background .15s;}
-.run-btn:hover{background:#e8e5e0;}
-.run-btn.running{background:#e8e5e0;color:#666;}
-.results-wrap{padding:16px 20px;}
-.results-placeholder{padding:32px 0;text-align:center;color:#aaa;}
-.ph-icon{font-size:24px;margin-bottom:6px;}
-.ph-text{font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#bbb;}
-.ph-sub{font-size:11px;color:#ccc;margin-top:4px;}
-.r-sbar{display:flex;height:5px;overflow:hidden;gap:1px;margin-bottom:3px;}
-.r-ss{min-width:1px;}
-.r-bar-labels{display:flex;justify-content:space-between;font-size:9px;color:#aaa;margin-bottom:10px;}
-.r-call{font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:15px;letter-spacing:.03em;color:#111;margin-bottom:3px;}
-.r-scope{font-size:10px;color:#aaa;margin-bottom:14px;}
-.r-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;}
-.r-tile{position:relative;padding:12px 10px 10px;overflow:hidden;opacity:0;transform:translateY(6px);transition:opacity .35s ease,transform .35s ease;}
-.r-tile.visible{opacity:1;transform:translateY(0);}
-.r-tile-party{font-family:'Roboto Condensed',sans-serif;font-weight:900;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.8);margin-bottom:2px;text-align:right;}
-.r-tile-seats{font-family:'Roboto Condensed',sans-serif;font-weight:900;font-size:32px;line-height:1;color:#fff;letter-spacing:-.02em;margin-bottom:2px;text-align:right;}
-.r-tile-change{font-family:'Roboto Condensed',sans-serif;font-weight:700;font-size:10px;color:rgba(255,255,255,.7);text-align:right;}
-.r-tile-change.gain{color:rgba(255,255,255,.95);}
-.r-tile-change.loss{color:rgba(255,255,255,.55);}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Arial',sans-serif; background:#fff; font-size:13px; }
+
+#header { padding:10px 16px 8px; border-bottom:2px solid #111; }
+#header h2 { font-size:13px; font-weight:700; color:#111; }
+#header p { font-size:10px; color:#888; margin-top:2px; }
+
+#inputs-wrap { padding:10px 16px; }
+#inputs-label { font-size:10px; font-weight:700; color:#666; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+
+#inputs-grid {
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  gap:4px;
+}
+
+.input-col { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.party-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; }
+.party-input {
+  width:100%; border:1.5px solid #ddd; border-radius:3px;
+  text-align:center; font-size:13px; font-weight:700; padding:4px 2px;
+  outline:none;
+}
+.party-input:focus { border-color:#111; }
+
+#run-wrap { padding:6px 16px 10px; display:flex; align-items:center; gap:10px; }
+#run-btn {
+  background:#111; color:#fff; border:none; border-radius:4px;
+  padding:8px 20px; font-size:12px; font-weight:700; cursor:pointer; letter-spacing:0.03em;
+}
+#run-btn:hover { background:#333; }
+#total-label { font-size:11px; color:#888; }
+#total-val { font-size:11px; font-weight:700; }
+
+#results-wrap { padding:0 16px 12px; }
+#results-label { font-size:10px; font-weight:700; color:#666; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+
+#results-grid {
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  gap:4px;
+}
+
+.result-col { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.result-seats { font-size:22px; font-weight:700; line-height:1; }
+.result-change { font-size:10px; }
+.result-bar-wrap { width:100%; height:3px; background:#eee; border-radius:2px; }
+.result-bar { height:100%; border-radius:2px; }
+
+#scroll-btn {
+  display:none; margin:0 16px 12px; background:#f5f3ef; border:none;
+  border-radius:4px; padding:7px 14px; font-size:11px; font-weight:700;
+  cursor:pointer; color:#111; width:calc(100% - 32px);
+}
+#scroll-btn:hover { background:#e8e5e0; }
+#status { font-size:9px; color:#bbb; text-align:right; padding:0 16px 6px; }
+#loading { text-align:center; padding:30px; color:#aaa; font-size:13px; }
 </style>
 </head>
 <body>
-<div class="masthead">
-  <span class="masthead-label">Britain Predicts</span>
-  <span class="masthead-title">Create your own forecast</span>
-  <span class="masthead-sub">Adjust vote shares &middot; run the model</span>
+
+<div id="header">
+  <h2>Britain Predicts — Polling Calculator</h2>
+  <p>Enter national vote shares, then run the forecast</p>
 </div>
-<div class="controls-wrap">
-  <div class="section-lbl" id="ctrl-label">National vote shares</div>
-  <div class="region-tabs" id="rtabs"></div>
-  <div id="reg-note-wrap"></div>
-  <div class="party-grid-inputs" id="pinputs"></div>
-  <div class="controls-bottom">
-    <div class="total-row">
-      <span class="total-lbl">Total</span>
-      <span class="total-val" id="total-val">100.0%</span>
-      <button class="norm-btn" id="norm-btn" onclick="normalise()">Normalise</button>
-    </div>
-    <div class="thr-row">
-      <span class="thr-lbl">STM threshold</span>
-      <input class="thr-input" type="number" id="thr" min="5" max="35" step="1" value="20">
-      <span class="thr-pct">%</span>
-    </div>
-    <button class="run-btn" id="run-btn" onclick="runModel()">Run forecast &nearr;</button>
-  </div>
+
+<div id="loading">Fetching data…</div>
+
+<div id="inputs-wrap" style="display:none">
+  <div id="inputs-label">National vote share (%) — adjust and run</div>
+  <div id="inputs-grid"></div>
 </div>
-<div class="results-wrap" id="results-wrap">
-  <div class="results-placeholder">
-    <div class="ph-icon">&#8635;</div>
-    <div class="ph-text">Adjust the vote shares above</div>
-    <div class="ph-sub">Then hit Run forecast to see your projection</div>
-  </div>
+
+<div id="run-wrap" style="display:none">
+  <button id="run-btn" onclick="runForecast()">Run forecast</button>
+  <span id="total-label">Total: </span><span id="total-val">—</span>
 </div>
+
+<div id="results-wrap" style="display:none">
+  <div id="results-label">Projected seats</div>
+  <div id="results-grid"></div>
+</div>
+
+<button id="scroll-btn" onclick="scrollToMap()">▼ See constituency map</button>
+<div id="status"></div>
+
 <script>
-const PC={con:'#0087DC',lab:'#E4003B',ldem:'#FAA61A',grn:'#02A95B',snp:'#C8A400',pc:'#3F8428',ref:'#12B6CF',oth:'#57534e'};
-const PL={con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Reform',oth:'Oth'};
-const MP=['con','lab','ldem','grn','snp','pc','ref','oth'];
-const BAR_ORDER=['grn','lab','snp','pc','ldem','oth','con','ref'];
-const TILE_ORDER=['grn','lab','snp','pc','ldem','oth','con','ref'];
-const REGS=['National','Scotland','Wales','N.Eng','S.Eng','Midlands','London'];
-const REG_KEYS=['GB-wide','Scotland','Wales','Northern England','Southern England','Midlands','London'];
-const WM={'Con':'con','Lab':'lab','LDem':'ldem','LD':'ldem','Grn':'grn','Green':'grn','SNP':'snp','PC':'pc','Reform':'ref','Ref':'ref','Ind':'oth','Other':'oth','Oth':'oth','Alba':'oth','Speaker':'oth','SDLP':'oth','UUP':'oth','DUP':'oth','SF':'oth','Alliance':'oth','APNI':'oth','TUV':'oth','RSTR':'oth','Restore':'oth'};
-const BN={con:23.7,lab:33.7,ldem:12.2,grn:6.7,snp:2.5,pc:0.7,ref:14.3,oth:6.2};
-const BS={con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
-const POLL_NAT={con:18.4,lab:18.3,ldem:12.2,grn:15.6,snp:0,pc:0,ref:26.4,oth:6.8};
-const POLL_REG={Scotland:{con:10.3,lab:17.3,ldem:9.0,grn:7.9,snp:32.4,pc:0,ref:20.2,oth:2.9},Wales:{con:12.8,lab:18.7,ldem:7.3,grn:7.1,snp:0,pc:26.2,ref:26.9,oth:1.0},'Northern England':{con:14.5,lab:22.4,ldem:9.6,grn:18.2,snp:0,pc:0,ref:30.2,oth:5.1},'Southern England':{con:21.2,lab:13.8,ldem:19.4,grn:15.7,snp:0,pc:0,ref:25.7,oth:4.2},Midlands:{con:21.5,lab:18.4,ldem:9.0,grn:18.0,snp:0,pc:0,ref:28.1,oth:5.0},London:{con:18.7,lab:26.4,ldem:13.1,grn:22.9,snp:0,pc:0,ref:15.3,oth:3.6}};
-const RESULTS_URL='https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv';
-function initDeltas(){const d={};Object.keys(POLL_REG).forEach(r=>{d[r]={};MP.forEach(p=>{d[r][p]=(POLL_REG[r][p]||0)-(POLL_NAT[p]||0);});});return d;}
-let national={...POLL_NAT},deltas=initDeltas(),cur='GB-wide',allSeats=[];
-function effShare(r,p){if(!POLL_REG[r])return national[p]||0;return Math.max(0,(national[p]||0)+((deltas[r]||{})[p]||0));}
-function hasAdj(k){if(k==='GB-wide')return false;return MP.some(p=>Math.abs((deltas[k]||{})[p]||0)>0.05);}
-function buildTabs(){const el=document.getElementById('rtabs');el.innerHTML='';REGS.forEach((label,i)=>{const k=REG_KEYS[i];const b=document.createElement('button');b.className='rtab'+(k===cur?' on':'')+(hasAdj(k)&&k!==cur?' adj':'');b.textContent=label;b.onclick=()=>{cur=k;buildTabs();renderInputs();};el.appendChild(b);});}
-function getNatTotal(){return MP.reduce((s,p)=>s+(national[p]||0),0);}
-function updateTotal(){const t=getNatTotal(),el=document.getElementById('total-val'),btn=document.getElementById('norm-btn');el.textContent=t.toFixed(1)+'%';const off=cur==='GB-wide'&&Math.abs(t-100)>0.5;el.className='total-val '+(off?'warn':'ok');btn.className='norm-btn'+(off?' active':'');}
-function normalise(){const t=getNatTotal();if(!t)return;MP.forEach(p=>{national[p]=((national[p]||0)/t)*100;});renderInputs();}
-function renderInputs(){
-  const isNat=cur==='GB-wide';
-  document.getElementById('ctrl-label').textContent=isNat?'National vote shares':REGS[REG_KEYS.indexOf(cur)]+' \u2014 adjustments (\u00b1 vs national)';
-  const nw=document.getElementById('reg-note-wrap');
-  nw.innerHTML=isNat?'':'<div class="reg-note"><span>Effective = national + adjustment</span><button class="reset-btn" onclick="resetReg()">Reset</button></div>';
-  const el=document.getElementById('pinputs');el.innerHTML='';
-  MP.filter(p=>{if(p==='snp')return cur==='Scotland'||isNat;if(p==='pc')return cur==='Wales'||isNat;return true;}).forEach(p=>{
-    const cell=document.createElement('div');cell.className='pi-cell';
-    if(isNat){
-      const v=(national[p]||0).toFixed(1);
-      cell.innerHTML='<div class="pi-dot-name"><span class="pi-dot" style="background:'+PC[p]+'"></span><span class="pi-name">'+PL[p]+'</span></div><div class="pi-input-row"><input class="pi-input" type="number" min="0" max="100" step="0.1" value="'+v+'" id="pv-'+p+'" oninput="upNat(this,\''+p+'\')"><span class="pi-pct">%</span><div class="pi-nudge"><button onclick="nudgeNat(\''+p+'\',0.1)">\u25b2</button><button onclick="nudgeNat(\''+p+'\',-0.1)">\u25bc</button></div></div>';
-    } else {
-      const d=(deltas[cur]||{})[p]||0,eff=Math.max(0,(national[p]||0)+d),cls=d>0.05?'pos':d<-0.05?'neg':'';
-      cell.innerHTML='<div class="pi-dot-name"><span class="pi-dot" style="background:'+PC[p]+'"></span><span class="pi-name">'+PL[p]+'</span></div><div class="pi-input-row"><input class="pi-input" type="number" min="-30" max="30" step="0.1" value="'+d.toFixed(1)+'" id="pv-'+p+'" oninput="upDelta(this,\''+p+'\')"><span class="pi-pct">%</span><div class="pi-nudge"><button onclick="nudgeDelta(\''+p+'\',0.1)">\u25b2</button><button onclick="nudgeDelta(\''+p+'\',-0.1)">\u25bc</button></div></div><div class="pi-eff">Eff: <span class="'+cls+'">'+eff.toFixed(1)+'%</span></div>';
-    }
-    el.appendChild(cell);
+const POLL_CSV   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=0&single=true&output=csv";
+const RESULTS_CSV= "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=774534693&single=true&output=csv";
+const PARAMS_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=1932049493&single=true&output=csv";
+
+
+
+const PARTIES    = ['con','lab','ldem','grn','snp','pc','ref','oth'];
+const TILE_ORDER = ['grn','lab','snp','pc','ldem','oth','con','ref'];
+const LABELS     = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Reform',oth:'Other'};
+const COLOURS    = {con:'#0087DC',lab:'#E4003B',ldem:'#FAA61A',grn:'#02A95B',snp:'#C8A400',pc:'#3F8428',ref:'#12B6CF',oth:'#57534e'};
+const BASELINE   = {con:23.7,lab:33.7,ldem:12.2,grn:6.7,snp:2.5,pc:0.7,ref:14.3,oth:6.2};
+const SEATS_2024 = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
+
+let resultRows = [], params = {};
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = parseRow(lines[0]);
+  return lines.slice(1).filter(l=>l.trim()).map(l=>{
+    const vals = parseRow(l);
+    const obj={};
+    headers.forEach((h,i)=>obj[h.trim()]=vals[i]||'');
+    return obj;
   });
-  updateTotal();
 }
-function upNat(el,p){national[p]=Math.max(0,Math.min(100,parseFloat(el.value)||0));updateTotal();}
-function nudgeNat(p,d){national[p]=Math.max(0,Math.min(100,(national[p]||0)+d));const el=document.getElementById('pv-'+p);if(el)el.value=national[p].toFixed(1);updateTotal();}
-function upDelta(el,p){if(!deltas[cur])deltas[cur]={};deltas[cur][p]=Math.max(-30,Math.min(30,parseFloat(el.value)||0));const cell=el.closest('.pi-cell');if(cell){const eff=Math.max(0,(national[p]||0)+deltas[cur][p]);const sp=cell.querySelector('.pi-eff span');if(sp){sp.textContent=eff.toFixed(1)+'%';sp.className=deltas[cur][p]>0.05?'pos':deltas[cur][p]<-0.05?'neg':'';}}buildTabs();}
-function nudgeDelta(p,d){if(!deltas[cur])deltas[cur]={};deltas[cur][p]=Math.max(-30,Math.min(30,((deltas[cur]||{})[p]||0)+d));const el=document.getElementById('pv-'+p);if(el)el.value=deltas[cur][p].toFixed(1);upDelta(el,p);}
-function resetReg(){if(cur==='GB-wide')return;deltas[cur]=initDeltas()[cur]||{};renderInputs();buildTabs();}
-function parseCSVRow(l){const r=[];let c='',q=false;for(let i=0;i<l.length;i++){const ch=l[i];if(ch==='"'){q=!q;}else if(ch===','&&!q){r.push(c.trim());c='';}else{c+=ch;}}r.push(c.trim());return r;}
-function parseCSV(t){const lines=t.trim().split('\n'),h=parseCSVRow(lines[0]);return lines.slice(1).filter(l=>l.trim()).map(l=>{const c=parseCSVRow(l),o={};h.forEach((k,i)=>o[k.trim()]=(c[i]||'').trim());return o;});}
-function inferTac(v){const s=MP.filter(p=>(v[p]||0)>0.03).sort((a,b)=>(v[b]||0)-(v[a]||0));const[f,sc]=s;if(!sc)return null;const pr=new Set([f,sc]);if(pr.has('lab')&&pr.has('ref'))return'lab_ref';if(pr.has('ldem')&&pr.has('con'))return'ldem_con';if(pr.has('grn')&&pr.has('lab'))return'grn_lab';return null;}
-function stm(seat){const thr=(parseInt(document.getElementById('thr').value)||20)/100,base=seat.votes,newN={},baseN={};MP.forEach(p=>{newN[p]=effShare(seat.region,p)/100;baseN[p]=(BN[p]||0)/100;});const sw={};MP.forEach(p=>{sw[p]=newN[p]-baseN[p];});const pr={};MP.forEach(p=>{const loc=base[p]||0,s=sw[p]||0;pr[p]=loc>=thr?Math.max(0,loc+s*Math.max(0,1-loc)*2):Math.max(0,loc*(1-Math.min(1,s<0?Math.abs(s)*2:0)));});const t=seat.tac;if(t==='lab_ref'){const ga=(pr.grn||0)*.10,la=(pr.ldem||0)*.08;pr.grn=Math.max(0,(pr.grn||0)-ga);pr.ldem=Math.max(0,(pr.ldem||0)-la);pr.lab=(pr.lab||0)+ga+la;}else if(t==='ldem_con'){const ga=(pr.grn||0)*.12,la=(pr.lab||0)*.15;pr.grn=Math.max(0,(pr.grn||0)-ga);pr.lab=Math.max(0,(pr.lab||0)-la);pr.ldem=(pr.ldem||0)+ga+la;}else if(t==='grn_lab'){const la=(pr.ldem||0)*.10;pr.ldem=Math.max(0,(pr.ldem||0)-la);pr.grn=(pr.grn||0)+la;}const tot=Object.values(pr).reduce((a,b)=>a+b,0);if(tot>0)MP.forEach(p=>pr[p]=(pr[p]||0)/tot);const sorted=MP.slice().sort((a,b)=>(pr[b]||0)-(pr[a]||0));return{winner:sorted[0],runner:sorted[1],margin:((pr[sorted[0]]||0)-(pr[sorted[1]]||0))*100,shares:pr};}
-async function loadSeats(){try{const r=await fetch(RESULTS_URL);if(r.ok){const t=await r.text();parseCSV(t).forEach(row=>{const region=(row['Region']||'').trim();if(!region||region==='Northern Ireland')return;const votes={};MP.forEach(p=>{votes[p]=p==='oth'?((parseFloat(row['oth_pct'])||0)+(parseFloat(row['rstr_pct'])||0)+(parseFloat(row['ind_pct'])||0))/100:(parseFloat(row[p+'_pct'])||0)/100;});allSeats.push({region,votes,tac:inferTac(votes),code:row['PCON24CD'],winner2024:WM[(row['Winner']||'').trim()]||'oth'});});}}catch(e){console.warn('Results fetch failed',e);}}
-function runModel(){const btn=document.getElementById('run-btn');btn.classList.add('running');btn.textContent='Running\u2026';btn.disabled=true;setTimeout(()=>{const counts={},results=[];MP.forEach(p=>counts[p]=0);allSeats.forEach(seat=>{const r=stm(seat);counts[r.winner]=(counts[r.winner]||0)+1;results.push({...r,seat});});renderResults(counts,results);try{window.parent.postMessage({action:'forecastUpdate',counts,seats:results.map(r=>({code:r.seat.code,winner:r.winner,margin:r.margin,shares:r.shares}))},'*');}catch(e){}btn.classList.remove('running');btn.textContent='Re-run forecast \u2197';btn.disabled=false;},20);}
-function renderResults(counts,results){const total=Object.values(counts).reduce((a,b)=>a+b,0),maj=Math.floor(total/2)+1,labS=counts.lab||0,conS=counts.con||0;const call=labS>=maj?'Labour majority of '+((labS-maj)*2+1):labS>=maj-30?'Labour short by '+(maj-labS):'Hung parliament \u2014 largest: '+(labS>=conS?'Lab':'Con')+' ('+Math.max(labS,conS)+')';const bar=BAR_ORDER.filter(p=>(counts[p]||0)>0).map(p=>'<div class="r-ss" style="width:'+((counts[p]||0)/total*100).toFixed(2)+'%;background:'+PC[p]+';"></div>').join('');const tiles=TILE_ORDER.map(p=>{const s=counts[p]||0,diff=s-(BS[p]||0),cls=diff>0?'gain':diff<0?'loss':'flat',arrow=diff>0?'\u25b2':diff<0?'\u25bc':'\u2014';return'<div class="r-tile" style="background:'+PC[p]+'" id="rt-'+p+'"><div class="r-tile-party">'+PL[p]+'</div><div class="r-tile-seats">'+s+'</div><div class="r-tile-change '+cls+'">'+arrow+' '+Math.abs(diff)+'</div></div>';}).join('');document.getElementById('results-wrap').innerHTML='<div class="r-sbar">'+bar+'</div><div class="r-bar-labels"><span>'+total+' GB seats</span><span>Majority: '+maj+'</span></div><div class="r-call">'+call+'</div><div class="r-scope">GB only &middot; NI projection coming soon &middot; 18 seats not included</div><div class="r-grid">'+tiles+'</div>';TILE_ORDER.forEach((p,i)=>setTimeout(()=>{const el=document.getElementById('rt-'+p);if(el)el.classList.add('visible');},40+i*40));}
-window.addEventListener('load',async()=>{await loadSeats();buildTabs();renderInputs();});
+function parseRow(line) {
+  const res=[]; let cur=''; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){inQ=!inQ;}
+    else if(c===','&&!inQ){res.push(cur);cur='';}
+    else cur+=c;
+  }
+  res.push(cur); return res;
+}
+async function fetchCSV(url){
+  const r=await fetch(url+'&cb='+Date.now());
+  return parseCSV(await r.text());
+}
+
+function updateTotal() {
+  let t=0;
+  PARTIES.forEach(p=>{ const el=document.getElementById('inp_'+p); if(el) t+=parseFloat(el.value)||0; });
+  const el=document.getElementById('total-val');
+  el.textContent=t.toFixed(1)+'%';
+  el.style.color=Math.abs(t-100)<0.5?'#02A95B':'#E4003B';
+}
+
+function runOptionC(polling) {
+  const counts={};
+  PARTIES.forEach(p=>counts[p]=0);
+
+  for (const seat of resultRows) {
+    const code = seat['PCON24CD']||seat['pcon24cd'];
+    if(!code) continue;
+    const p = params[code];
+    const shares={};
+
+    for (const party of PARTIES) {
+      const local2024 = parseFloat(seat[party+'_pct']||seat[party+'pct']||0)/100;
+      const poll = (parseFloat(document.getElementById('inp_'+party)?.value)||0)/100;
+      const base = BASELINE[party]/100;
+      const swing = poll - base;
+      const headroom = Math.max(0, 1-local2024);
+      const mult = p ? (parseFloat(p[party+'_multiplier'])||1.0) : 1.0;
+      const frac = p ? (parseFloat(p[party+'_fraction'])||0.2) : 0.2;
+      const floor = local2024 * frac;
+      shares[party] = Math.max(floor, Math.max(0, local2024 + swing*headroom*2*mult));
+    }
+
+    const total=Object.values(shares).reduce((a,b)=>a+b,0);
+    if(total>0) Object.keys(shares).forEach(k=>shares[k]/=total);
+
+    let winner='oth', best=0;
+    PARTIES.forEach(p=>{ if(shares[p]>best){best=shares[p];winner=p;} });
+    counts[winner]=(counts[winner]||0)+1;
+  }
+  return counts;
+}
+
+function runForecast() {
+  const polling={};
+  PARTIES.forEach(p=>polling[p]=parseFloat(document.getElementById('inp_'+p)?.value)||0);
+  const seats = runOptionC(polling);
+
+  // Render results
+  const grid=document.getElementById('results-grid');
+  grid.innerHTML='';
+  document.getElementById('results-wrap').style.display='block';
+
+  for (const p of TILE_ORDER) {
+    const count=seats[p]||0;
+    const prev=SEATS_2024[p]||0;
+    const diff=count-prev;
+    const maxSeats=Math.max(...Object.values(seats))||1;
+    const col=document.createElement('div');
+    col.className='result-col';
+    col.innerHTML=`
+      <div class="party-label" style="color:${COLOURS[p]}">${LABELS[p]}</div>
+      <div class="result-seats" style="color:${COLOURS[p]}">${count}</div>
+      <div class="result-change" style="color:${COLOURS[p]}">${diff>=0?'+':''}${diff}</div>
+      <div class="result-bar-wrap"><div class="result-bar" style="background:${COLOURS[p]};width:${Math.round(count/maxSeats*100)}%"></div></div>
+    `;
+    grid.appendChild(col);
+  }
+
+  document.getElementById('scroll-btn').style.display='block';
+
+  // Broadcast
+  window.parent.postMessage({action:'forecastUpdate', polling, seats},'*');
+}
+
+function scrollToMap() {
+  window.parent.postMessage({action:'scrollToCalculator'},'*');
+}
+
+async function init() {
+  try {
+    const [pollRows, rRows, pRows] = await Promise.all([
+      fetchCSV(POLL_CSV),
+      fetchCSV(RESULTS_CSV),
+      fetchCSV(PARAMS_CSV)
+    ]);
+    resultRows = rRows;
+    pRows.forEach(r=>{ const c=r['PCON24CD']||r['pcon24cd']; if(c) params[c]=r; });
+
+    const latest = pollRows[pollRows.length-1];
+
+    // Build input grid
+    const grid=document.getElementById('inputs-grid');
+    for (const p of TILE_ORDER) {
+      const val = parseFloat(latest[p]||latest[p.charAt(0).toUpperCase()+p.slice(1)]||BASELINE[p]).toFixed(1);
+      const col=document.createElement('div');
+      col.className='input-col';
+      col.innerHTML=`
+        <div class="party-label" style="color:${COLOURS[p]}">${LABELS[p]}</div>
+        <input class="party-input" id="inp_${p}" type="number" step="0.1" min="0" max="60"
+          value="${val}" style="color:${COLOURS[p]};border-color:${COLOURS[p]}44"
+          oninput="updateTotal()">
+      `;
+      grid.appendChild(col);
+    }
+
+    document.getElementById('loading').style.display='none';
+    document.getElementById('inputs-wrap').style.display='block';
+    document.getElementById('run-wrap').style.display='flex';
+    updateTotal();
+
+    document.getElementById('status').textContent =
+      `Option C model · ${rRows.length} constituencies · ${Object.keys(params).length} with parameters`;
+
+  } catch(e) {
+    document.getElementById('loading').textContent='Error: '+e.message;
+    console.error(e);
+  }
+}
+
+init();
 </script>
 </body>
 </html>

@@ -10,7 +10,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Roboto',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0;}
 
-/* ── Control barz ── */
+/* ── Control bar ── */
 #control-bar{display:flex;align-items:center;gap:12px;padding:8px 10px;background:#f0ede8;border-bottom:1px solid #ddd;flex-wrap:wrap;}
 @media(max-width:480px){#control-bar{gap:8px;}#view-controls{width:100%;}#search-wrap{max-width:100%;}}
 #search-wrap{flex:1;min-width:160px;max-width:320px;position:relative;}
@@ -218,7 +218,9 @@ const CHOROPLETH_CEILINGS = { grn:50, lab:65, snp:60, pc:60, ldem:50, oth:30, co
 // ============================================================
 // CONFIG
 // ============================================================
-const RESULTS_URL = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv';
+const RESULTS_URL  = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv';
+const PARAMS_URL   = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=1932049493&single=true&output=csv';
+let PARAMS = {}; // keyed by PCON24CD
 const GEO_URL     = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/parlcons_westmisnter.json';
 const NI_CODES    = new Set(['N06000001','N06000002','N06000003','N06000004','N06000005','N06000006','N06000007','N06000008','N06000009','N06000010','N06000011','N06000012']);
 const WM = {'Con':'con','Lab':'lab','LDem':'ldem','LD':'ldem','Grn':'grn','Green':'grn','SNP':'snp','PC':'pc','Reform':'ref','Ref':'ref','Ind':'oth','Other':'oth','Oth':'oth','Alba':'oth','Speaker':'oth','SDLP':'oth','UUP':'oth','DUP':'oth','SF':'oth','Alliance':'oth','APNI':'oth','TUV':'oth','RSTR':'oth','Restore':'oth'};
@@ -249,21 +251,39 @@ function parseCSV(text){const lines=text.trim().split('\n'),h=parseCSVLine(lines
 // ============================================================
 // STM MODEL
 // ============================================================
-function inferTac(v){const s=MP.filter(p=>(v[p]||0)>0.03).sort((a,b)=>(v[b]||0)-(v[a]||0));const[f,sc]=s;if(!sc)return null;const pr=new Set([f,sc]);if(pr.has('lab')&&pr.has('ref'))return'lab_ref';if(pr.has('ldem')&&pr.has('con'))return'ldem_con';if(pr.has('grn')&&pr.has('lab'))return'grn_lab';return null;}
+// ── Option C STM model ────────────────────────────────────────────────────────
+// Formula: projected = MAX(floor, local + swing × headroom × 2 × multiplier)
+// Floor   = 2024 local vote × fraction (from PARAMS CSV, per seat per party)
+// Mult    = constituency demographic multiplier (from PARAMS CSV, per seat per party)
 
-function stm(seat){
-  const thr=0.20,base=seat.votes,newN={},baseN={};
-  MP.forEach(p=>{newN[p]=effShare(seat.region,p)/100;baseN[p]=(BN[p]||0)/100;});
-  const sw={};MP.forEach(p=>{sw[p]=newN[p]-baseN[p];});
-  const pr={};MP.forEach(p=>{const loc=base[p]||0,s=sw[p]||0;pr[p]=loc>=thr?Math.max(0,loc+s*Math.max(0,1-loc)*2):Math.max(0,loc*(1-Math.min(1,s<0?Math.abs(s)*2:0)));});
-  const t=seat.tac;
-  if(t==='lab_ref'){const ga=(pr.grn||0)*.10,la=(pr.ldem||0)*.08;pr.grn=Math.max(0,(pr.grn||0)-ga);pr.ldem=Math.max(0,(pr.ldem||0)-la);pr.lab=(pr.lab||0)+ga+la;}
-  else if(t==='ldem_con'){const ga=(pr.grn||0)*.12,la=(pr.lab||0)*.15;pr.grn=Math.max(0,(pr.grn||0)-ga);pr.lab=Math.max(0,(pr.lab||0)-la);pr.ldem=(pr.ldem||0)+ga+la;}
-  else if(t==='grn_lab'){const la=(pr.ldem||0)*.10;pr.ldem=Math.max(0,(pr.ldem||0)-la);pr.grn=(pr.grn||0)+la;}
-  const tot=Object.values(pr).reduce((a,b)=>a+b,0);if(tot>0)MP.forEach(p=>pr[p]=(pr[p]||0)/tot);
-  const sorted=MP.slice().sort((a,b)=>(pr[b]||0)-(pr[a]||0));
-  return{winner:sorted[0],margin:((pr[sorted[0]]||0)-(pr[sorted[1]]||0))*100,shares:pr};
+function optionC(seat, overridePolling){
+  const code = seat.code;
+  const p    = PARAMS[code] || {};
+  const base = seat.votes;
+  const pr   = {};
+
+  MP.forEach(party => {
+    const local2024  = base[party] || 0;
+    const effPoll    = overridePolling
+      ? (overridePolling[party] || 0) / 100
+      : effShare(seat.region, party) / 100;
+    const baseline   = (BN[party] || 0) / 100;
+    const swing      = effPoll - baseline;
+    const headroom   = Math.max(0, 1 - local2024);
+    const mult       = parseFloat(p[party + '_multiplier'] || 1.0) || 1.0;
+    const frac       = parseFloat(p[party + '_fraction']   || 0.2) || 0.2;
+    const floor      = local2024 * frac;
+    pr[party] = Math.max(floor, Math.max(0, local2024 + swing * headroom * 2 * mult));
+  });
+
+  const tot = Object.values(pr).reduce((a,b)=>a+b,0);
+  if(tot > 0) MP.forEach(p => pr[p] = (pr[p]||0) / tot);
+  const sorted = MP.slice().sort((a,b) => (pr[b]||0) - (pr[a]||0));
+  return { winner: sorted[0], margin: ((pr[sorted[0]]||0) - (pr[sorted[1]]||0)) * 100, shares: pr };
 }
+
+// Keep stm as alias so any remaining references still work
+function stm(seat){ return optionC(seat, null); }
 
 // ============================================================
 // DATA — keyed by PCON24CD
@@ -272,17 +292,32 @@ let DATA = {}; // { code: { name, region, defender, votes, winner, margin, share
 
 async function loadData(){
   try{
-    const r=await fetch(RESULTS_URL);
-    if(!r.ok)throw new Error('fetch failed');
-    const rows=parseCSV(await r.text());
+    // Fetch results and params in parallel
+    const [rResp, pResp] = await Promise.all([
+      fetch(RESULTS_URL),
+      fetch(PARAMS_URL + '&cb=' + Date.now())
+    ]);
+
+    // Load params
+    if(pResp.ok){
+      const pRows = parseCSV(await pResp.text());
+      pRows.forEach(row => {
+        const code = (row['PCON24CD']||'').trim();
+        if(code) PARAMS[code] = row;
+      });
+    }
+
+    if(!rResp.ok) throw new Error('results fetch failed');
+    const rows=parseCSV(await rResp.text());
     rows.forEach(row=>{
       const code=row['PCON24CD'], region=(row['Region']||'').trim();
       if(!code||region==='Northern Ireland')return;
       const votes={};
       MP.forEach(p=>{votes[p]=p==='oth'?((parseFloat(row['oth_pct'])||0)+(parseFloat(row['rstr_pct'])||0)+(parseFloat(row['ind_pct'])||0))/100:(parseFloat(row[p+'_pct'])||0)/100;});
       const defender=WM[(row['Winner']||'').trim()]||'oth';
-      const result=stm({region,votes,tac:inferTac(votes)});
+      const result=optionC({code,region,votes}, null);
       DATA[code]={
+        code,
         name: row['Constituency name'],
         region,
         defender,
@@ -292,7 +327,7 @@ async function loadData(){
         shares: result.shares,
       };
     });
-  }catch(e){console.warn('Results CSV failed:',e);}
+  }catch(e){console.warn('Data load failed:',e);}
 }
 
 // ============================================================
@@ -597,10 +632,18 @@ function initSearch(geojsonData,map,isWideFn){
 // FORECAST UPDATE (from iframe 2 via parent relay)
 // ============================================================
 window.addEventListener('message',e=>{
-  if(!e.data||e.data.action!=='forecastUpdate'||!e.data.seats)return;
-  e.data.seats.forEach(s=>{
-    if(DATA[s.code]){DATA[s.code].winner=s.winner;DATA[s.code].margin=s.margin;DATA[s.code].shares=s.shares;}
+  if(!e.data||e.data.action!=='forecastUpdate')return;
+  const polling = e.data.polling || null;
+
+  // Rerun Option C for every seat with the new polling figures
+  Object.keys(DATA).forEach(code=>{
+    const seat = DATA[code];
+    const result = optionC(seat, polling);
+    seat.winner = result.winner;
+    seat.margin = result.margin;
+    seat.shares = result.shares;
   });
+
   // Recolour the map
   if(window._map&&window._map.isStyleLoaded()){
     const expr=buildColorMatch();
