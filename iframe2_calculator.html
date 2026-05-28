@@ -145,6 +145,17 @@ const COLOURS    = {con:'#0087DC',lab:'#E4003B',ldem:'#FAA61A',grn:'#02A95B',snp
 const SEATS_2024 = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
 const GB_2024    = {con:23.7,lab:33.7,ldem:12.2,grn:6.4,snp:2.5,pc:0.7,ref:14.3,oth:6.2};
 
+// ── Regional 2024 results — used as swing baseline ───────────────────────────
+const BASELINE_2024 = {
+  'GB-wide':         {con:23.7,lab:33.7,ldem:12.2,grn:6.4, snp:2.5, pc:0.7, ref:14.3,oth:6.2},
+  'Scotland':        {con:12.7,lab:35.3,ldem:9.7, grn:3.8, snp:30.0,pc:0,   ref:7.0, oth:1.5},
+  'Wales':           {con:18.2,lab:37.0,ldem:6.5, grn:4.7, snp:0,   pc:14.8,ref:16.9,oth:1.9},
+  'Northern England':{con:19.6,lab:43.6,ldem:6.9, grn:7.2, snp:0,   pc:0,   ref:17.4,oth:5.3},
+  'Southern England':{con:29.7,lab:26.5,ldem:19.4,grn:7.1, snp:0,   pc:0,   ref:15.1,oth:2.1},
+  'Midlands':        {con:27.7,lab:35.2,ldem:7.3, grn:6.4, snp:0,   pc:0,   ref:18.6,oth:4.8},
+  'London':          {con:20.6,lab:43.0,ldem:11.0,grn:10.0,snp:0,   pc:0,   ref:8.7, oth:6.7},
+};
+
 // State
 let resultRows = [], params = {}, livePollMap = {};
 
@@ -412,7 +423,11 @@ function runModel(pollMap) {
         : raw / 100;
 
       const regPollPct = (regPoll[party] || 0) / 100;
-      const swing      = regPollPct - (GB_2024[party] || 0) / 100;
+      // Swing vs regional 2024 result — NOT GB 2024 average
+      // This is critical: SNP poll 32.4% vs Scotland 2024 30.0% = +2.4pt swing
+      // NOT vs GB 2024 2.5% which would give a false +29.9pt swing
+      const regBase2024  = (BASELINE_2024[region] || BASELINE_2024['GB-wide'])[party] || 0;
+      const swing        = regPollPct - regBase2024 / 100;
       const headroom   = Math.max(0, 1 - local2024);
       const mult       = parseFloat(p[party + '_multiplier'] || 1) || 1;
       const frac       = parseFloat(p[party + '_fraction']   || 0.2) || 0.2;
