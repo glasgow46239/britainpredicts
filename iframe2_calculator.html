@@ -212,12 +212,15 @@ async function init() {
     resultRows = rRows;
     pRows.forEach(r => { const c = (r['PCON24CD'] || '').trim(); if (c) params[c] = r; });
 
-    // Read latest poll — try lowercase then capitalised keys
-    const latest = pollRows[pollRows.length - 1];
+    // Read GB-wide row from polling sheet (sheet has one row per region)
+    const gbRow = pollRows.find(r =>
+      (r['region']||r['Region']||Object.values(r)[0]||'').trim().toLowerCase() === 'gb-wide'
+    ) || pollRows[0] || {};
     const get = p => {
-      const cap = p.charAt(0).toUpperCase() + p.slice(1);
-      const v = parseFloat(latest[p] || latest[cap] || latest[p + '_pct'] || 0);
-      return isNaN(v) || v === 0 ? GB_2024[p] : v;
+      const v = p === 'oth'
+        ? (parseFloat(gbRow['oth_pct']||0)||0) + (parseFloat(gbRow['rstr_pct']||0)||0)
+        : parseFloat(gbRow[p + '_pct'] || gbRow[p] || 0) || 0;
+      return v > 0 ? v : GB_2024[p];
     };
 
     // Build input grid
