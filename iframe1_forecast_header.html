@@ -6,41 +6,18 @@
 <title>Britain Predicts — Forecast</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: 'Arial', sans-serif; background: #ffffff; }
-
-  #header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 16px 8px;
-    border-bottom: 2px solid #111;
-  }
-  #brand { font-size: 13px; font-weight: 700; color: #111; letter-spacing: 0.02em; }
-  #updated { font-size: 10px; color: #888; margin-top: 2px; }
-
-  #tiles {
-    display: flex;
-    justify-content: flex-end;
-    gap: 6px;
-    padding: 10px 16px 10px 8px;
-    flex-wrap: wrap;
-  }
-
-  .tile {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-width: 70px;
-    padding: 6px 8px 5px;
-    border-radius: 4px;
-  }
-  .tile-party { font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 3px; }
-  .tile-seats { font-size: 22px; font-weight: 700; line-height: 1; }
-  .tile-change { font-size: 10px; margin-top: 3px; opacity: 0.85; }
-  .tile-bar { width: 100%; height: 3px; border-radius: 2px; margin-top: 5px; opacity: 0.5; }
-
-  #status { text-align: right; font-size: 9px; color: #bbb; padding: 0 16px 6px; }
-  #loading { text-align: center; padding: 30px; color: #aaa; font-size: 13px; }
+  body { font-family:'Arial',sans-serif; background:#ffffff; }
+  #header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px 8px; border-bottom:2px solid #111; }
+  #brand { font-size:13px; font-weight:700; color:#111; letter-spacing:0.02em; }
+  #updated { font-size:10px; color:#888; margin-top:2px; }
+  #tiles { display:flex; justify-content:flex-end; gap:6px; padding:10px 16px 10px 8px; flex-wrap:wrap; }
+  .tile { display:flex; flex-direction:column; align-items:center; min-width:70px; padding:6px 8px 5px; border-radius:4px; }
+  .tile-party { font-size:9px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; margin-bottom:3px; }
+  .tile-seats { font-size:22px; font-weight:700; line-height:1; }
+  .tile-change { font-size:10px; margin-top:3px; opacity:0.85; }
+  .tile-bar { width:100%; height:3px; border-radius:2px; margin-top:5px; opacity:0.5; }
+  #status { text-align:right; font-size:9px; color:#bbb; padding:0 16px 6px; }
+  #loading { text-align:center; padding:30px; color:#aaa; font-size:13px; }
 </style>
 </head>
 <body>
@@ -56,131 +33,145 @@
 <div id="status"></div>
 
 <script>
-// ── Config ────────────────────────────────────────────────────────────────────
-const POLL_CSV   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=0&single=true&output=csv";
-const RESULTS_CSV= "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=888442617&single=true&output=csv";
-const PARAMS_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=1932049493&single=true&output=csv";
+// ── URLs ──────────────────────────────────────────────────────────────────────
+const POLL_CSV    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=0&single=true&output=csv";
+const RESULTS_URL = "https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv";
+const PARAMS_CSV  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=1932049493&single=true&output=csv";
 
-const PARTIES = ['con','lab','ldem','grn','snp','pc','ref','oth'];
-const PARTY_LABELS = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Reform',oth:'Other'};
-const PARTY_COLOURS = {con:'#0087DC',lab:'#E4003B',ldem:'#FAA61A',grn:'#02A95B',snp:'#C8A400',pc:'#3F8428',ref:'#12B6CF',oth:'#57534e'};
+// ── Constants ─────────────────────────────────────────────────────────────────
+const PARTIES    = ['con','lab','ldem','grn','snp','pc','ref','oth'];
 const TILE_ORDER = ['grn','lab','snp','pc','ldem','oth','con','ref'];
-
-// 2024 baseline national shares
-const BASELINE = {con:23.7,lab:33.7,ldem:12.2,grn:6.7,snp:2.5,pc:0.7,ref:14.3,oth:6.2};
-// 2024 seat counts
+const LABELS     = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Reform',oth:'Other'};
+const COLOURS    = {con:'#0087DC',lab:'#E4003B',ldem:'#FAA61A',grn:'#02A95B',snp:'#C8A400',pc:'#3F8428',ref:'#12B6CF',oth:'#57534e'};
 const SEATS_2024 = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
 
-// ── CSV parser (handles quoted commas) ───────────────────────────────────────
+// 2024 national baseline
+const BN = {con:23.7,lab:33.7,ldem:12.2,grn:6.7,snp:2.5,pc:0.7,ref:14.3,oth:6.2};
+
+// Regional deltas — difference between each region and the GB baseline
+// Derived from your polling table. Fixed structural offsets, updated by national swing.
+const REG_DELTAS = {
+  Scotland:         {con:-13.4,lab:-16.4,ldem:-3.2,grn:1.2,snp:29.9,pc:0,ref:5.9,oth:-3.9},
+  Wales:            {con:-10.9,lab:-15.0,ldem:-4.9,grn:0.4,snp:0,pc:25.5,ref:12.6,oth:-5.8},
+  'Northern England':{con:-9.2,lab:-11.3,ldem:-2.6,grn:11.5,snp:0,pc:0,ref:15.9,oth:-1.7},
+  'Southern England':{con:-2.5,lab:-19.9,ldem:7.2,grn:9.0,snp:0,pc:0,ref:11.4,oth:-2.6},
+  Midlands:         {con:-2.2,lab:-15.3,ldem:-3.2,grn:11.3,snp:0,pc:0,ref:13.8,oth:-1.8},
+  London:           {con:-5.0,lab:-7.3,ldem:0.9,grn:16.2,snp:0,pc:0,ref:0.9,oth:-3.2},
+};
+
+// Effective share for a region given current national polling
+function effShare(region, party, national) {
+  const delta = (REG_DELTAS[region] || {})[party] || 0;
+  return Math.max(0, (national[party] || 0) + delta);
+}
+
+// ── CSV parsers ───────────────────────────────────────────────────────────────
+function parseRow(line) {
+  const res=[]; let cur=''; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){inQ=!inQ;}
+    else if(c===','&&!inQ){res.push(cur);cur='';}
+    else cur+=c;
+  }
+  res.push(cur); return res;
+}
 function parseCSV(text) {
-  const lines = text.trim().split('\n');
-  const headers = parseCSVRow(lines[0]);
+  const lines=text.trim().split('\n');
+  const headers=parseRow(lines[0]);
   return lines.slice(1).filter(l=>l.trim()).map(l=>{
-    const vals = parseCSVRow(l);
-    const obj = {};
+    const vals=parseRow(l), obj={};
     headers.forEach((h,i)=>obj[h.trim()]=vals[i]||'');
     return obj;
   });
 }
-function parseCSVRow(line) {
-  const result=[]; let cur=''; let inQ=false;
-  for(let i=0;i<line.length;i++){
-    const c=line[i];
-    if(c==='"'){inQ=!inQ;}
-    else if(c===','&&!inQ){result.push(cur);cur='';}
-    else cur+=c;
-  }
-  result.push(cur);
-  return result;
-}
-
-// ── Fetch with cache-bust ─────────────────────────────────────────────────────
 async function fetchCSV(url) {
-  const r = await fetch(url + '&cb=' + Date.now());
+  const r=await fetch(url+'&cb='+Date.now());
+  return parseCSV(await r.text());
+}
+async function fetchRaw(url) {
+  const r=await fetch(url+'?cb='+Date.now());
   return parseCSV(await r.text());
 }
 
-// ── Option C STM model ────────────────────────────────────────────────────────
-function runOptionC(seats, polling, params) {
-  // polling: {con, lab, ldem, grn, snp, pc, ref, oth} — regional %
-  // params: map of PCON24CD → {con_multiplier, lab_multiplier, ..., con_fraction, ...}
+// ── Option C model ────────────────────────────────────────────────────────────
+function runOptionC(resultRows, national, params) {
+  const counts = {}; PARTIES.forEach(p=>counts[p]=0);
 
-  const seatWinners = {};
+  for (const seat of resultRows) {
+    const code   = (seat['PCON24CD']||'').trim();
+    const region = (seat['Region']||seat['region']||'').trim();
+    if (!code || region === 'Northern Ireland') continue;
 
-  for (const seat of seats) {
-    const code = seat['PCON24CD'] || seat['pcon24cd'];
-    if (!code) continue;
-
-    const p = params[code];
+    const p = params[code] || {};
     const shares = {};
 
     for (const party of PARTIES) {
-      const local2024 = parseFloat(seat[party + '_pct'] || seat[party + 'pct'] || 0) / 100;
-      const poll = (polling[party] || 0) / 100;
-      const base = BASELINE[party] / 100;
-      const swing = poll - base;
+      // Read 2024 local vote — try both column name formats
+      const raw = parseFloat(
+        seat[party+'_pct'] || seat[party+'pct'] || seat[party] || 0
+      );
+      // oth absorbs rstr and ind
+      const local2024 = party === 'oth'
+        ? (raw + parseFloat(seat['rstr_pct']||seat['rstrpct']||0) + parseFloat(seat['ind_pct']||seat['indpct']||0)) / 100
+        : raw / 100;
+
+      const poll     = effShare(region, party, national) / 100;
+      const baseline = (BN[party] || 0) / 100;
+      const swing    = poll - baseline;
       const headroom = Math.max(0, 1 - local2024);
-
-      let mult = 1.0, frac = 0.2;
-      if (p) {
-        mult = parseFloat(p[party + '_multiplier'] || 1) || 1.0;
-        frac = parseFloat(p[party + '_fraction'] || 0.2) || 0.2;
-      }
-
-      const floor = local2024 * frac;
-      const dampened = swing * headroom * 2 * mult;
-      shares[party] = Math.max(floor, Math.max(0, local2024 + dampened));
+      const mult     = parseFloat(p[party+'_multiplier'] || 1.0) || 1.0;
+      const frac     = parseFloat(p[party+'_fraction']   || 0.2) || 0.2;
+      const floor    = local2024 * frac;
+      shares[party]  = Math.max(floor, Math.max(0, local2024 + swing * headroom * 2 * mult));
     }
 
-    // normalise
     const total = Object.values(shares).reduce((a,b)=>a+b,0);
-    if (total > 0) Object.keys(shares).forEach(p=>shares[p]/=total);
+    if (total > 0) PARTIES.forEach(p=>shares[p]/=total);
 
-    // winner
-    let winner = 'oth', best = 0;
-    for (const party of PARTIES) {
-      if (shares[party] > best) { best = shares[party]; winner = party; }
-    }
-    seatWinners[code] = winner;
+    let winner='oth', best=0;
+    PARTIES.forEach(p=>{ if(shares[p]>best){best=shares[p];winner=p;} });
+    counts[winner] = (counts[winner]||0) + 1;
   }
-
-  // count seats
-  const counts = {};
-  PARTIES.forEach(p=>counts[p]=0);
-  Object.values(seatWinners).forEach(w=>counts[w]=(counts[w]||0)+1);
   return counts;
+}
+
+// ── Read polling from CSV ─────────────────────────────────────────────────────
+function extractPolling(row) {
+  // Try lowercase, then capitalised, then Title case
+  const get = (p) => {
+    const cap = p.charAt(0).toUpperCase() + p.slice(1);
+    const v = parseFloat(row[p] || row[cap] || row[p+'_pct'] || row[p.toUpperCase()] || 0);
+    return isNaN(v) ? 0 : v;
+  };
+  const national = {};
+  PARTIES.forEach(p => national[p] = get(p));
+  return national;
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function init() {
   try {
     const [pollRows, resultRows, paramRows] = await Promise.all([
-      fetchCSV(POLL_CSV), fetchCSV(RESULTS_CSV), fetchCSV(PARAMS_CSV)
+      fetchCSV(POLL_CSV),
+      fetchRaw(RESULTS_URL),
+      fetchCSV(PARAMS_CSV),
     ]);
 
-    // Latest poll row
-    const latest = pollRows[pollRows.length - 1];
-    const polling = {};
-    PARTIES.forEach(p => {
-      const val = parseFloat(latest[p] || latest[p.charAt(0).toUpperCase()+p.slice(1)] || 0);
-      polling[p] = val;
-    });
+    const latest  = pollRows[pollRows.length - 1];
+    const national = extractPolling(latest);
 
     // Build params lookup
     const params = {};
-    for (const row of paramRows) {
-      const code = row['PCON24CD'] || row['pcon24cd'];
-      if (code) params[code] = row;
-    }
+    paramRows.forEach(r => { const c=(r['PCON24CD']||'').trim(); if(c) params[c]=r; });
 
     // Run model
-    const seats = runOptionC(resultRows, polling, params);
+    const seats = runOptionC(resultRows, national, params);
 
-    // Render
+    // Render tiles
     const tilesEl = document.getElementById('tiles');
-    const loadEl  = document.getElementById('loading');
+    document.getElementById('loading').style.display = 'none';
     tilesEl.style.display = 'flex';
-    loadEl.style.display  = 'none';
 
     for (const p of TILE_ORDER) {
       const count = seats[p] || 0;
@@ -188,25 +179,26 @@ async function init() {
       const diff  = count - prev;
       const tile  = document.createElement('div');
       tile.className = 'tile';
-      tile.style.background = PARTY_COLOURS[p] + '18';
+      tile.style.background = COLOURS[p] + '18';
       tile.innerHTML = `
-        <div class="tile-party" style="color:${PARTY_COLOURS[p]}">${PARTY_LABELS[p]}</div>
-        <div class="tile-seats" style="color:${PARTY_COLOURS[p]}">${count}</div>
-        <div class="tile-change" style="color:${PARTY_COLOURS[p]}">${diff>=0?'+':''}${diff}</div>
-        <div class="tile-bar" style="background:${PARTY_COLOURS[p]}"></div>
+        <div class="tile-party" style="color:${COLOURS[p]}">${LABELS[p]}</div>
+        <div class="tile-seats" style="color:${COLOURS[p]}">${count}</div>
+        <div class="tile-change" style="color:${COLOURS[p]}">${diff>=0?'+':''}${diff}</div>
+        <div class="tile-bar" style="background:${COLOURS[p]}"></div>
       `;
       tilesEl.appendChild(tile);
     }
 
     const pollDate = latest['date'] || latest['Date'] || 'latest polls';
     document.getElementById('updated').textContent = `Forecast based on ${pollDate} polling`;
-    document.getElementById('status').textContent = `Option C model · ${Object.keys(params).length} constituencies`;
+    document.getElementById('status').textContent =
+      `Option C · regional adjustment · ${resultRows.length} seats · ${Object.keys(params).length} with parameters`;
 
     // Broadcast to parent
-    window.parent.postMessage({ action: 'forecastUpdate', polling, seats }, '*');
+    window.parent.postMessage({ action:'forecastUpdate', polling:national, seats }, '*');
 
   } catch(e) {
-    document.getElementById('loading').textContent = 'Error loading data: ' + e.message;
+    document.getElementById('loading').textContent = 'Error: ' + e.message;
     console.error(e);
   }
 }

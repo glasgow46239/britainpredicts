@@ -7,58 +7,31 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:'Arial',sans-serif; background:#fff; font-size:13px; }
-
 #header { padding:10px 16px 8px; border-bottom:2px solid #111; }
 #header h2 { font-size:13px; font-weight:700; color:#111; }
 #header p { font-size:10px; color:#888; margin-top:2px; }
-
 #inputs-wrap { padding:10px 16px; }
 #inputs-label { font-size:10px; font-weight:700; color:#666; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
-
-#inputs-grid {
-  display:grid;
-  grid-template-columns:repeat(8,1fr);
-  gap:4px;
-}
-
+#inputs-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:4px; }
 .input-col { display:flex; flex-direction:column; align-items:center; gap:3px; }
 .party-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; }
-.party-input {
-  width:100%; border:1.5px solid #ddd; border-radius:3px;
-  text-align:center; font-size:13px; font-weight:700; padding:4px 2px;
-  outline:none;
-}
+.party-input { width:100%; border:1.5px solid #ddd; border-radius:3px; text-align:center; font-size:13px; font-weight:700; padding:4px 2px; outline:none; }
 .party-input:focus { border-color:#111; }
-
 #run-wrap { padding:6px 16px 10px; display:flex; align-items:center; gap:10px; }
-#run-btn {
-  background:#111; color:#fff; border:none; border-radius:4px;
-  padding:8px 20px; font-size:12px; font-weight:700; cursor:pointer; letter-spacing:0.03em;
-}
+#run-btn { background:#111; color:#fff; border:none; border-radius:4px; padding:8px 20px; font-size:12px; font-weight:700; cursor:pointer; letter-spacing:0.03em; }
 #run-btn:hover { background:#333; }
 #total-label { font-size:11px; color:#888; }
 #total-val { font-size:11px; font-weight:700; }
-
+#reg-note { font-size:9px; color:#aaa; margin-left:auto; }
 #results-wrap { padding:0 16px 12px; }
 #results-label { font-size:10px; font-weight:700; color:#666; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
-
-#results-grid {
-  display:grid;
-  grid-template-columns:repeat(8,1fr);
-  gap:4px;
-}
-
+#results-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:4px; }
 .result-col { display:flex; flex-direction:column; align-items:center; gap:3px; }
 .result-seats { font-size:22px; font-weight:700; line-height:1; }
 .result-change { font-size:10px; }
 .result-bar-wrap { width:100%; height:3px; background:#eee; border-radius:2px; }
 .result-bar { height:100%; border-radius:2px; }
-
-#scroll-btn {
-  display:none; margin:0 16px 12px; background:#f5f3ef; border:none;
-  border-radius:4px; padding:7px 14px; font-size:11px; font-weight:700;
-  cursor:pointer; color:#111; width:calc(100% - 32px);
-}
+#scroll-btn { display:none; margin:0 16px 12px; background:#f5f3ef; border:none; border-radius:4px; padding:7px 14px; font-size:11px; font-weight:700; cursor:pointer; color:#111; width:calc(100% - 32px); }
 #scroll-btn:hover { background:#e8e5e0; }
 #status { font-size:9px; color:#bbb; text-align:right; padding:0 16px 6px; }
 #loading { text-align:center; padding:30px; color:#aaa; font-size:13px; }
@@ -68,19 +41,20 @@ body { font-family:'Arial',sans-serif; background:#fff; font-size:13px; }
 
 <div id="header">
   <h2>Britain Predicts — Polling Calculator</h2>
-  <p>Enter national vote shares, then run the forecast</p>
+  <p>Enter GB-wide national vote shares — regional breakdowns applied automatically</p>
 </div>
 
 <div id="loading">Fetching data…</div>
 
 <div id="inputs-wrap" style="display:none">
-  <div id="inputs-label">National vote share (%) — adjust and run</div>
+  <div id="inputs-label">National vote share (%)</div>
   <div id="inputs-grid"></div>
 </div>
 
 <div id="run-wrap" style="display:none">
   <button id="run-btn" onclick="runForecast()">Run forecast</button>
   <span id="total-label">Total: </span><span id="total-val">—</span>
+  <span id="reg-note">Regional adjustments applied per seat</span>
 </div>
 
 <div id="results-wrap" style="display:none">
@@ -92,31 +66,35 @@ body { font-family:'Arial',sans-serif; background:#fff; font-size:13px; }
 <div id="status"></div>
 
 <script>
-const POLL_CSV   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=0&single=true&output=csv";
-const RESULTS_CSV= "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=888442617&single=true&output=csv";
-const PARAMS_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=1932049493&single=true&output=csv";
-
-
+const RESULTS_URL = "https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv";
+const POLL_CSV    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=0&single=true&output=csv";
+const PARAMS_CSV  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=1932049493&single=true&output=csv";
 
 const PARTIES    = ['con','lab','ldem','grn','snp','pc','ref','oth'];
 const TILE_ORDER = ['grn','lab','snp','pc','ldem','oth','con','ref'];
 const LABELS     = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Reform',oth:'Other'};
 const COLOURS    = {con:'#0087DC',lab:'#E4003B',ldem:'#FAA61A',grn:'#02A95B',snp:'#C8A400',pc:'#3F8428',ref:'#12B6CF',oth:'#57534e'};
-const BASELINE   = {con:23.7,lab:33.7,ldem:12.2,grn:6.7,snp:2.5,pc:0.7,ref:14.3,oth:6.2};
 const SEATS_2024 = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
+const BN         = {con:23.7,lab:33.7,ldem:12.2,grn:6.7,snp:2.5,pc:0.7,ref:14.3,oth:6.2};
+
+// Structural regional deltas — fixed offsets from national share
+// These preserve regional character when national polling changes
+const REG_DELTAS = {
+  Scotland:          {con:-13.4,lab:-16.4,ldem:-3.2,grn:1.2,snp:29.9,pc:0,ref:5.9,oth:-3.9},
+  Wales:             {con:-10.9,lab:-15.0,ldem:-4.9,grn:0.4,snp:0,pc:25.5,ref:12.6,oth:-5.8},
+  'Northern England':{con:-9.2,lab:-11.3,ldem:-2.6,grn:11.5,snp:0,pc:0,ref:15.9,oth:-1.7},
+  'Southern England':{con:-2.5,lab:-19.9,ldem:7.2,grn:9.0,snp:0,pc:0,ref:11.4,oth:-2.6},
+  Midlands:          {con:-2.2,lab:-15.3,ldem:-3.2,grn:11.3,snp:0,pc:0,ref:13.8,oth:-1.8},
+  London:            {con:-5.0,lab:-7.3,ldem:0.9,grn:16.2,snp:0,pc:0,ref:0.9,oth:-3.2},
+};
+
+function effShare(region, party, national) {
+  const delta = (REG_DELTAS[region] || {})[party] || 0;
+  return Math.max(0, (national[party] || 0) + delta);
+}
 
 let resultRows = [], params = {};
 
-function parseCSV(text) {
-  const lines = text.trim().split('\n');
-  const headers = parseRow(lines[0]);
-  return lines.slice(1).filter(l=>l.trim()).map(l=>{
-    const vals = parseRow(l);
-    const obj={};
-    headers.forEach((h,i)=>obj[h.trim()]=vals[i]||'');
-    return obj;
-  });
-}
 function parseRow(line) {
   const res=[]; let cur=''; let inQ=false;
   for(let i=0;i<line.length;i++){
@@ -127,8 +105,18 @@ function parseRow(line) {
   }
   res.push(cur); return res;
 }
-async function fetchCSV(url){
-  const r=await fetch(url+'&cb='+Date.now());
+function parseCSV(text) {
+  const lines=text.trim().split('\n');
+  const headers=parseRow(lines[0]);
+  return lines.slice(1).filter(l=>l.trim()).map(l=>{
+    const vals=parseRow(l),obj={};
+    headers.forEach((h,i)=>obj[h.trim()]=vals[i]||'');
+    return obj;
+  });
+}
+async function fetchCSV(url,raw=false) {
+  const sep = raw ? '?' : '&';
+  const r=await fetch(url+sep+'cb='+Date.now());
   return parseCSV(await r.text());
 }
 
@@ -140,32 +128,43 @@ function updateTotal() {
   el.style.color=Math.abs(t-100)<0.5?'#02A95B':'#E4003B';
 }
 
-function runOptionC(polling) {
-  const counts={};
-  PARTIES.forEach(p=>counts[p]=0);
+function getNational() {
+  const n={};
+  PARTIES.forEach(p=>n[p]=parseFloat(document.getElementById('inp_'+p)?.value)||0);
+  return n;
+}
+
+function runOptionC(national) {
+  const counts={}; PARTIES.forEach(p=>counts[p]=0);
 
   for (const seat of resultRows) {
-    const code = seat['PCON24CD']||seat['pcon24cd'];
-    if(!code) continue;
-    const p = params[code];
-    const shares={};
+    const code   = (seat['PCON24CD']||'').trim();
+    const region = (seat['Region']||seat['region']||'').trim();
+    if (!code || region==='Northern Ireland') continue;
+
+    const p = params[code] || {};
+    const shares = {};
 
     for (const party of PARTIES) {
-      const local2024 = parseFloat(seat[party+'_pct']||seat[party+'pct']||0)/100;
-      const poll = (parseFloat(document.getElementById('inp_'+party)?.value)||0)/100;
-      const base = BASELINE[party]/100;
-      const swing = poll - base;
-      const headroom = Math.max(0, 1-local2024);
-      const mult = p ? (parseFloat(p[party+'_multiplier'])||1.0) : 1.0;
-      const frac = p ? (parseFloat(p[party+'_fraction'])||0.2) : 0.2;
-      const floor = local2024 * frac;
-      shares[party] = Math.max(floor, Math.max(0, local2024 + swing*headroom*2*mult));
+      const raw = parseFloat(seat[party+'_pct']||seat[party+'pct']||seat[party]||0);
+      const local2024 = party==='oth'
+        ? (raw + parseFloat(seat['rstr_pct']||seat['rstrpct']||0) + parseFloat(seat['ind_pct']||seat['indpct']||0)) / 100
+        : raw / 100;
+
+      const poll     = effShare(region, party, national) / 100;
+      const baseline = (BN[party] || 0) / 100;
+      const swing    = poll - baseline;
+      const headroom = Math.max(0, 1 - local2024);
+      const mult     = parseFloat(p[party+'_multiplier']||1.0)||1.0;
+      const frac     = parseFloat(p[party+'_fraction']  ||0.2)||0.2;
+      const floor    = local2024 * frac;
+      shares[party]  = Math.max(floor, Math.max(0, local2024 + swing*headroom*2*mult));
     }
 
     const total=Object.values(shares).reduce((a,b)=>a+b,0);
-    if(total>0) Object.keys(shares).forEach(k=>shares[k]/=total);
+    if(total>0) PARTIES.forEach(p=>shares[p]/=total);
 
-    let winner='oth', best=0;
+    let winner='oth',best=0;
     PARTIES.forEach(p=>{ if(shares[p]>best){best=shares[p];winner=p;} });
     counts[winner]=(counts[winner]||0)+1;
   }
@@ -173,20 +172,17 @@ function runOptionC(polling) {
 }
 
 function runForecast() {
-  const polling={};
-  PARTIES.forEach(p=>polling[p]=parseFloat(document.getElementById('inp_'+p)?.value)||0);
-  const seats = runOptionC(polling);
+  const national = getNational();
+  const seats    = runOptionC(national);
 
   // Render results
   const grid=document.getElementById('results-grid');
   grid.innerHTML='';
   document.getElementById('results-wrap').style.display='block';
 
+  const maxSeats=Math.max(...Object.values(seats),1);
   for (const p of TILE_ORDER) {
-    const count=seats[p]||0;
-    const prev=SEATS_2024[p]||0;
-    const diff=count-prev;
-    const maxSeats=Math.max(...Object.values(seats))||1;
+    const count=seats[p]||0, prev=SEATS_2024[p]||0, diff=count-prev;
     const col=document.createElement('div');
     col.className='result-col';
     col.innerHTML=`
@@ -200,8 +196,8 @@ function runForecast() {
 
   document.getElementById('scroll-btn').style.display='block';
 
-  // Broadcast
-  window.parent.postMessage({action:'forecastUpdate', polling, seats},'*');
+  // Broadcast national polling — map applies same regional deltas
+  window.parent.postMessage({action:'forecastUpdate', polling:national, seats},'*');
 }
 
 function scrollToMap() {
@@ -211,24 +207,31 @@ function scrollToMap() {
 async function init() {
   try {
     const [pollRows, rRows, pRows] = await Promise.all([
-      fetchCSV(POLL_CSV),
-      fetchCSV(RESULTS_CSV),
-      fetchCSV(PARAMS_CSV)
+      fetchCSV(POLL_CSV, false),
+      fetchCSV(RESULTS_URL, true),
+      fetchCSV(PARAMS_CSV, false),
     ]);
+
     resultRows = rRows;
-    pRows.forEach(r=>{ const c=r['PCON24CD']||r['pcon24cd']; if(c) params[c]=r; });
+    pRows.forEach(r=>{ const c=(r['PCON24CD']||'').trim(); if(c) params[c]=r; });
 
     const latest = pollRows[pollRows.length-1];
 
-    // Build input grid
+    // Populate inputs — try lowercase keys first, then capitalised
+    const get = (p) => {
+      const cap = p.charAt(0).toUpperCase()+p.slice(1);
+      const v = parseFloat(latest[p]||latest[cap]||latest[p+'_pct']||BN[p]);
+      return isNaN(v) ? BN[p] : v;
+    };
+
     const grid=document.getElementById('inputs-grid');
     for (const p of TILE_ORDER) {
-      const val = parseFloat(latest[p]||latest[p.charAt(0).toUpperCase()+p.slice(1)]||BASELINE[p]).toFixed(1);
+      const val=get(p).toFixed(1);
       const col=document.createElement('div');
       col.className='input-col';
       col.innerHTML=`
         <div class="party-label" style="color:${COLOURS[p]}">${LABELS[p]}</div>
-        <input class="party-input" id="inp_${p}" type="number" step="0.1" min="0" max="60"
+        <input class="party-input" id="inp_${p}" type="number" step="0.1" min="0" max="70"
           value="${val}" style="color:${COLOURS[p]};border-color:${COLOURS[p]}44"
           oninput="updateTotal()">
       `;
@@ -241,7 +244,7 @@ async function init() {
     updateTotal();
 
     document.getElementById('status').textContent =
-      `Option C model · ${rRows.length} constituencies · ${Object.keys(params).length} with parameters`;
+      `Option C · ${rRows.length} seats · ${Object.keys(params).length} with parameters`;
 
   } catch(e) {
     document.getElementById('loading').textContent='Error: '+e.message;
