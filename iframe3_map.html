@@ -226,59 +226,27 @@ const NI_CODES    = new Set(['N06000001','N06000002','N06000003','N06000004','N0
 const WM = {'Con':'con','Lab':'lab','LDem':'ldem','LD':'ldem','Grn':'grn','Green':'grn','SNP':'snp','PC':'pc','Reform':'ref','Ref':'ref','Ind':'oth','Other':'oth','Oth':'oth','Alba':'oth','Speaker':'oth','SDLP':'oth','UUP':'oth','DUP':'oth','SF':'oth','Alliance':'oth','APNI':'oth','TUV':'oth','RSTR':'oth','Restore':'oth'};
 
 // STM constants
-const BN   = {con:23.7,lab:33.7,ldem:12.2,grn:6.7,snp:2.5,pc:0.7,ref:14.3,oth:6.2};
 const MP   = ['con','lab','ldem','grn','snp','pc','ref','oth'];
-const BASELINES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=333030958&single=true&output=csv';
 const GB_2024 = {con:23.7,lab:33.7,ldem:12.2,grn:6.4,snp:2.5,pc:0.7,ref:14.3,oth:9.7};
-// ── Regional 2024 baselines ───────────────────────────────────────────────────
-// Hardcoded from your 2024_breakdown sheet — used as fallback and initial values.
-// loadBaselines() will overwrite these if the CSV fetches successfully.
-let REG_BASELINE = {
-  'Scotland':          {con:12.7,lab:35.3,ldem:9.7, grn:3.8,snp:30.0,pc:0,   ref:7.0, oth:1.5},
-  'Wales':             {con:18.2,lab:37.0,ldem:6.5, grn:4.7,snp:0,   pc:14.8,ref:16.9,oth:1.9},
-  'Northern England':  {con:19.6,lab:43.6,ldem:6.9, grn:7.2,snp:0,   pc:0,   ref:17.4,oth:5.3},
-  'Southern England':  {con:29.7,lab:26.5,ldem:19.4,grn:7.1,snp:0,   pc:0,   ref:15.1,oth:2.1},
-  'Midlands':          {con:27.7,lab:35.2,ldem:7.3, grn:6.4,snp:0,   pc:0,   ref:18.6,oth:4.8},
-  'London':            {con:20.6,lab:43.0,ldem:11.0,grn:10.0,snp:0,  pc:0,   ref:8.7, oth:6.7},
+
+// ── Regional 2024 baselines (hardcoded — cannot be overwritten with bad data) ─
+const REG_BASELINE = {
+  'Scotland':         {con:12.7,lab:35.3,ldem:9.7, grn:3.8, snp:30.0,pc:0,   ref:7.0, oth:1.5},
+  'Wales':            {con:18.2,lab:37.0,ldem:6.5, grn:4.7, snp:0,   pc:14.8,ref:16.9,oth:1.9},
+  'Northern England': {con:19.6,lab:43.6,ldem:6.9, grn:7.2, snp:0,   pc:0,   ref:17.4,oth:5.3},
+  'Southern England': {con:29.7,lab:26.5,ldem:19.4,grn:7.1, snp:0,   pc:0,   ref:15.1,oth:2.1},
+  'Midlands':         {con:27.7,lab:35.2,ldem:7.3, grn:6.4, snp:0,   pc:0,   ref:18.6,oth:4.8},
+  'London':           {con:20.6,lab:43.0,ldem:11.0,grn:10.0,snp:0,   pc:0,   ref:8.7, oth:6.7},
 };
 
-async function loadBaselines() {
-  try {
-    const r = await fetch(BASELINES_CSV + '&cb=' + Date.now());
-    const text = await r.text();
-    const lines = text.trim().split('\n').filter(l=>l.trim());
-    const sep = lines[0].includes('\t') ? '\t' : ',';
-    const headers = lines[0].split(sep).map(h=>h.trim());
-    let loaded = 0;
-    for (const line of lines.slice(1)) {
-      const vals = line.split(sep).map(v=>v.trim());
-      const row = {};
-      headers.forEach((h,i) => row[h] = vals[i]||'');
-      const region = (row['region']||row['Region']||'').trim();
-      if (!region || region.toLowerCase()==='gb-wide') continue;
-      const rb = {
-        con:  parseFloat(row['con_pct'] ||0)||0,
-        lab:  parseFloat(row['lab_pct'] ||0)||0,
-        ldem: parseFloat(row['ldem_pct']||0)||0,
-        grn:  parseFloat(row['grn_pct'] ||0)||0,
-        snp:  parseFloat(row['snp_pct'] ||0)||0,
-        pc:   parseFloat(row['pc_pct']  ||0)||0,
-        ref:  parseFloat(row['ref_pct'] ||0)||0,
-        oth: (parseFloat(row['oth_pct'] ||0)||0)+(parseFloat(row['rstr_pct']||0)||0),
-      };
-      if (rb.con + rb.lab > 20) { REG_BASELINE[region] = rb; loaded++; }
-    }
-    console.log('Baselines loaded from CSV:', loaded, 'regions');
-  } catch(e) {
-    console.warn('Baselines CSV failed, using hardcoded values:', e.message);
-  }
-}
+// Current national polling — updated when calculator broadcasts
+let national = {...GB_2024};
 
 function effShare(region, party, nat) {
   const rb = REG_BASELINE[region];
-  if (!rb) return Math.max(0, nat[party]||0);
-  const swing = (nat[party]||0) - (GB_2024[party]||0);
-  return Math.max(0, (rb[party]||0) + swing);
+  if (!rb) return Math.max(0, nat[party] || 0);
+  const swing = (nat[party] || 0) - (GB_2024[party] || 0);
+  return Math.max(0, (rb[party] || 0) + swing);
 }
 
 // ============================================================
@@ -331,12 +299,10 @@ let DATA = {}; // { code: { name, region, defender, votes, winner, margin, share
 
 async function loadData(){
   try{
-    // Fetch results, params and regional baselines in parallel
     const [rResp, pResp] = await Promise.all([
       fetch(RESULTS_URL),
       fetch(PARAMS_URL + '&cb=' + Date.now())
     ]);
-    await loadBaselines();
 
     // Load params
     if(pResp.ok){
