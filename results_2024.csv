@@ -1,4 +1,4 @@
-PCON24CD,Constituency name,Region,Winner,con_pct,lab_pct,ldem_pct,grn_pct,snp_pct,pc_pct,ref_pct,rstr_pct,ind_pct,oth_pct
+PCON24CD,Constituency name,region,Winner,con_pct,lab_pct,ldem_pct,grn_pct,snp_pct,pc_pct,ref_pct,rstr_pct,ind_pct,oth_pct
 E14001063,Aldershot,Southern England,Lab,29.0,40.7,8.3,4.4,0.0,0.0,16.9,0.0,0.0,0.6
 E14001064,Aldridge-Brownhills,Midlands,Con,38.9,28.4,4.3,4.3,0.0,0.0,24.2,0.0,0.0,0.0
 E14001065,Altrincham and Sale West,Northern England,Lab,32.3,40.4,9.2,7.2,0.0,0.0,9.6,0.0,0.0,1.2
