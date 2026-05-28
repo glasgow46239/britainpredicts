@@ -157,7 +157,10 @@ async function init() {
       fetchCSV(PARAMS_CSV),
     ]);
 
-    const natPoll = extractPolling(pollRows);
+    // Extract current GB-wide poll for display purposes
+    const currentPoll = extractPolling(pollRows);
+    // On load use GB_2024 as natPoll so swing=0 and each seat gets its regional baseline
+    const natPoll = {...GB_2024};
 
     const params = {};
     paramRows.forEach(r => {
@@ -188,7 +191,7 @@ async function init() {
     }
 
     const latest  = pollRows.find(r => (r['region']||r['Region']||Object.values(r)[0]||'').trim().toLowerCase()==='gb-wide') || pollRows[0] || {};
-    const pollDate = latest['date'] || latest['Date'] || 'latest polls';
+    const pollDate = latest['date'] || latest['Date'] || 'current regional polling';
     document.getElementById('updated').textContent = `Forecast based on ${pollDate} polling`;
     document.getElementById('status').textContent =
       `Option C · ${resultRows.length} seats · ${Object.keys(params).length} with parameters`;
