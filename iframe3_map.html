@@ -228,19 +228,38 @@ const WM = {'Con':'con','Lab':'lab','LDem':'ldem','LD':'ldem','Grn':'grn','Green
 // STM constants
 const BN   = {con:23.7,lab:33.7,ldem:12.2,grn:6.7,snp:2.5,pc:0.7,ref:14.3,oth:6.2};
 const MP   = ['con','lab','ldem','grn','snp','pc','ref','oth'];
-const POLL_NAT = {con:18.4,lab:18.3,ldem:12.2,grn:15.6,snp:0,pc:0,ref:26.4,oth:6.8};
-const POLL_REG = {
-  Scotland:        {con:10.3,lab:17.3,ldem:9.0,grn:7.9,snp:32.4,pc:0,ref:20.2,oth:2.9},
-  Wales:           {con:12.8,lab:18.7,ldem:7.3,grn:7.1,snp:0,pc:26.2,ref:26.9,oth:1.0},
-  'Northern England':  {con:14.5,lab:22.4,ldem:9.6,grn:18.2,snp:0,pc:0,ref:30.2,oth:5.1},
-  'Southern England':  {con:21.2,lab:13.8,ldem:19.4,grn:15.7,snp:0,pc:0,ref:25.7,oth:4.2},
-  Midlands:        {con:21.5,lab:18.4,ldem:9.0,grn:18.0,snp:0,pc:0,ref:28.1,oth:5.0},
-  London:          {con:18.7,lab:26.4,ldem:13.1,grn:22.9,snp:0,pc:0,ref:15.3,oth:3.6},
-};
+const BASELINES_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=333030958&single=true&output=csv';
+const GB_2024 = {con:23.7,lab:33.7,ldem:12.2,grn:6.4,snp:2.5,pc:0.7,ref:14.3,oth:9.7};
+let REG_BASELINE = {};
+let national = {...GB_2024}; // current national polling — updated when calculator broadcasts
 
-function initDeltas(){const d={};Object.keys(POLL_REG).forEach(r=>{d[r]={};MP.forEach(p=>{d[r][p]=(POLL_REG[r][p]||0)-(POLL_NAT[p]||0);});});return d;}
-const national={...POLL_NAT}, deltas=initDeltas();
-function effShare(region,p){if(!POLL_REG[region])return national[p]||0;return Math.max(0,(national[p]||0)+((deltas[region]||{})[p]||0));}
+async function loadBaselines() {
+  try {
+    const r = await fetch(BASELINES_CSV + '&cb=' + Date.now());
+    const rows = parseCSV(await r.text());
+    for (const row of rows) {
+      const region = (row['region']||row['Region']||Object.values(row)[0]||'').trim();
+      if (!region || region.toLowerCase()==='gb-wide') continue;
+      REG_BASELINE[region] = {
+        con:  parseFloat(row['con_pct'] ||0)||0,
+        lab:  parseFloat(row['lab_pct'] ||0)||0,
+        ldem: parseFloat(row['ldem_pct']||0)||0,
+        grn:  parseFloat(row['grn_pct'] ||0)||0,
+        snp:  parseFloat(row['snp_pct'] ||0)||0,
+        pc:   parseFloat(row['pc_pct']  ||0)||0,
+        ref:  parseFloat(row['ref_pct'] ||0)||0,
+        oth: (parseFloat(row['oth_pct'] ||0)||0)+(parseFloat(row['rstr_pct']||0)||0),
+      };
+    }
+  } catch(e) { console.warn('Baselines fetch failed:', e); }
+}
+
+function effShare(region, party, nat) {
+  const rb = REG_BASELINE[region];
+  if (!rb) return Math.max(0, nat[party]||0);
+  const swing = (nat[party]||0) - (GB_2024[party]||0);
+  return Math.max(0, (rb[party]||0) + swing);
+}
 
 // ============================================================
 // CSV parser — RFC 4180 compliant
@@ -260,15 +279,15 @@ function optionC(seat, overridePolling){
   const code = seat.code;
   const p    = PARAMS[code] || {};
   const base = seat.votes;
+  const nat  = overridePolling || national;
   const pr   = {};
 
   MP.forEach(party => {
     const local2024  = base[party] || 0;
-    const effPoll    = overridePolling
-      ? (overridePolling[party] || 0) / 100
-      : effShare(seat.region, party) / 100;
-    const baseline   = (BN[party] || 0) / 100;
-    const swing      = effPoll - baseline;
+    const poll       = effShare(seat.region, party, nat) / 100;
+    const rb         = REG_BASELINE[seat.region];
+    const baseline   = (rb ? (rb[party]||0) : (GB_2024[party]||0)) / 100;
+    const swing      = poll - baseline;
     const headroom   = Math.max(0, 1 - local2024);
     const mult       = parseFloat(p[party + '_multiplier'] || 1.0) || 1.0;
     const frac       = parseFloat(p[party + '_fraction']   || 0.2) || 0.2;
@@ -292,11 +311,12 @@ let DATA = {}; // { code: { name, region, defender, votes, winner, margin, share
 
 async function loadData(){
   try{
-    // Fetch results and params in parallel
+    // Fetch results, params and regional baselines in parallel
     const [rResp, pResp] = await Promise.all([
       fetch(RESULTS_URL),
       fetch(PARAMS_URL + '&cb=' + Date.now())
     ]);
+    await loadBaselines();
 
     // Load params
     if(pResp.ok){
@@ -632,13 +652,14 @@ function initSearch(geojsonData,map,isWideFn){
 // FORECAST UPDATE (from iframe 2 via parent relay)
 // ============================================================
 window.addEventListener('message',e=>{
-  if(!e.data||e.data.action!=='forecastUpdate')return;
-  const polling = e.data.polling || null;
+  if(!e.data||e.data.action!=='forecastUpdate') return;
+  // Update the national polling store
+  if(e.data.polling) Object.assign(national, e.data.polling);
 
-  // Rerun Option C for every seat with the new polling figures
+  // Rerun Option C for every seat with updated national polling
   Object.keys(DATA).forEach(code=>{
     const seat = DATA[code];
-    const result = optionC(seat, polling);
+    const result = optionC(seat, national);
     seat.winner = result.winner;
     seat.margin = result.margin;
     seat.shares = result.shares;

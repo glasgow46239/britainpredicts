@@ -41,59 +41,39 @@ body { font-family:'Arial',sans-serif; background:#fff; font-size:13px; }
 
 <div id="header">
   <h2>Britain Predicts — Polling Calculator</h2>
-  <p>Enter GB-wide national vote shares — regional breakdowns applied automatically</p>
+  <p>GB-wide national shares — regional 2024 baselines applied per seat</p>
 </div>
-
 <div id="loading">Fetching data…</div>
-
 <div id="inputs-wrap" style="display:none">
   <div id="inputs-label">National vote share (%)</div>
   <div id="inputs-grid"></div>
 </div>
-
 <div id="run-wrap" style="display:none">
   <button id="run-btn" onclick="runForecast()">Run forecast</button>
   <span id="total-label">Total: </span><span id="total-val">—</span>
-  <span id="reg-note">Regional adjustments applied per seat</span>
+  <span id="reg-note">Scotland/Wales/region swings vs 2024 regional results</span>
 </div>
-
 <div id="results-wrap" style="display:none">
   <div id="results-label">Projected seats</div>
   <div id="results-grid"></div>
 </div>
-
 <button id="scroll-btn" onclick="scrollToMap()">▼ See constituency map</button>
 <div id="status"></div>
 
 <script>
-const RESULTS_URL = "https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv";
-const POLL_CSV    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=0&single=true&output=csv";
-const PARAMS_CSV  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=1932049493&single=true&output=csv";
+const POLL_CSV      = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=0&single=true&output=csv";
+const RESULTS_URL   = "https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv";
+const PARAMS_CSV    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=1932049493&single=true&output=csv";
+const BASELINES_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=333030958&single=true&output=csv";
 
 const PARTIES    = ['con','lab','ldem','grn','snp','pc','ref','oth'];
 const TILE_ORDER = ['grn','lab','snp','pc','ldem','oth','con','ref'];
 const LABELS     = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Reform',oth:'Other'};
 const COLOURS    = {con:'#0087DC',lab:'#E4003B',ldem:'#FAA61A',grn:'#02A95B',snp:'#C8A400',pc:'#3F8428',ref:'#12B6CF',oth:'#57534e'};
 const SEATS_2024 = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
-const BN         = {con:23.7,lab:33.7,ldem:12.2,grn:6.7,snp:2.5,pc:0.7,ref:14.3,oth:6.2};
+const GB_2024    = {con:23.7,lab:33.7,ldem:12.2,grn:6.4,snp:2.5,pc:0.7,ref:14.3,oth:9.7};
 
-// Structural regional deltas — fixed offsets from national share
-// These preserve regional character when national polling changes
-const REG_DELTAS = {
-  Scotland:          {con:-13.4,lab:-16.4,ldem:-3.2,grn:1.2,snp:29.9,pc:0,ref:5.9,oth:-3.9},
-  Wales:             {con:-10.9,lab:-15.0,ldem:-4.9,grn:0.4,snp:0,pc:25.5,ref:12.6,oth:-5.8},
-  'Northern England':{con:-9.2,lab:-11.3,ldem:-2.6,grn:11.5,snp:0,pc:0,ref:15.9,oth:-1.7},
-  'Southern England':{con:-2.5,lab:-19.9,ldem:7.2,grn:9.0,snp:0,pc:0,ref:11.4,oth:-2.6},
-  Midlands:          {con:-2.2,lab:-15.3,ldem:-3.2,grn:11.3,snp:0,pc:0,ref:13.8,oth:-1.8},
-  London:            {con:-5.0,lab:-7.3,ldem:0.9,grn:16.2,snp:0,pc:0,ref:0.9,oth:-3.2},
-};
-
-function effShare(region, party, national) {
-  const delta = (REG_DELTAS[region] || {})[party] || 0;
-  return Math.max(0, (national[party] || 0) + delta);
-}
-
-let resultRows = [], params = {};
+let REG_BASELINE={}, resultRows=[], params={};
 
 function parseRow(line) {
   const res=[]; let cur=''; let inQ=false;
@@ -115,89 +95,97 @@ function parseCSV(text) {
   });
 }
 async function fetchCSV(url,raw=false) {
-  const sep = raw ? '?' : '&';
+  const sep=raw?'?':'&';
   const r=await fetch(url+sep+'cb='+Date.now());
   return parseCSV(await r.text());
 }
 
+async function loadBaselines() {
+  const rows=await fetchCSV(BASELINES_CSV);
+  for (const row of rows) {
+    const region=(row['region']||row['Region']||Object.values(row)[0]||'').trim();
+    if(!region||region.toLowerCase()==='gb-wide') continue;
+    REG_BASELINE[region]={
+      con: parseFloat(row['con_pct'] ||0)||0,
+      lab: parseFloat(row['lab_pct'] ||0)||0,
+      ldem:parseFloat(row['ldem_pct']||0)||0,
+      grn: parseFloat(row['grn_pct'] ||0)||0,
+      snp: parseFloat(row['snp_pct'] ||0)||0,
+      pc:  parseFloat(row['pc_pct']  ||0)||0,
+      ref: parseFloat(row['ref_pct'] ||0)||0,
+      oth:(parseFloat(row['oth_pct'] ||0)||0)+(parseFloat(row['rstr_pct']||0)||0),
+    };
+  }
+}
+
+function effShare(region,party,nat) {
+  const rb=REG_BASELINE[region];
+  if(!rb) return Math.max(0,nat[party]||0);
+  const swing=(nat[party]||0)-(GB_2024[party]||0);
+  return Math.max(0,(rb[party]||0)+swing);
+}
+
 function updateTotal() {
   let t=0;
-  PARTIES.forEach(p=>{ const el=document.getElementById('inp_'+p); if(el) t+=parseFloat(el.value)||0; });
+  PARTIES.forEach(p=>{const el=document.getElementById('inp_'+p);if(el)t+=parseFloat(el.value)||0;});
   const el=document.getElementById('total-val');
   el.textContent=t.toFixed(1)+'%';
   el.style.color=Math.abs(t-100)<0.5?'#02A95B':'#E4003B';
 }
 
 function getNational() {
-  const n={};
-  PARTIES.forEach(p=>n[p]=parseFloat(document.getElementById('inp_'+p)?.value)||0);
+  const n={}; PARTIES.forEach(p=>n[p]=parseFloat(document.getElementById('inp_'+p)?.value)||0);
   return n;
 }
 
-function runOptionC(national) {
+function runOptionC(nat) {
   const counts={}; PARTIES.forEach(p=>counts[p]=0);
-
   for (const seat of resultRows) {
-    const code   = (seat['PCON24CD']||'').trim();
-    const region = (seat['Region']||seat['region']||'').trim();
-    if (!code || region==='Northern Ireland') continue;
-
-    const p = params[code] || {};
-    const shares = {};
-
+    const code  =(seat['PCON24CD']||seat['pcon24cd']||'').trim();
+    const region=(seat['Region']  ||seat['region']  ||'').trim();
+    if(!code||region==='Northern Ireland') continue;
+    const p=params[code]||{}, shares={};
     for (const party of PARTIES) {
-      const raw = parseFloat(seat[party+'_pct']||seat[party+'pct']||seat[party]||0);
-      const local2024 = party==='oth'
-        ? (raw + parseFloat(seat['rstr_pct']||seat['rstrpct']||0) + parseFloat(seat['ind_pct']||seat['indpct']||0)) / 100
-        : raw / 100;
-
-      const poll     = effShare(region, party, national) / 100;
-      const baseline = (BN[party] || 0) / 100;
-      const swing    = poll - baseline;
-      const headroom = Math.max(0, 1 - local2024);
-      const mult     = parseFloat(p[party+'_multiplier']||1.0)||1.0;
-      const frac     = parseFloat(p[party+'_fraction']  ||0.2)||0.2;
-      const floor    = local2024 * frac;
-      shares[party]  = Math.max(floor, Math.max(0, local2024 + swing*headroom*2*mult));
+      const raw=parseFloat(seat[party+'_pct']||seat[party+'pct']||seat[party]||0);
+      const local2024=party==='oth'
+        ?(raw+parseFloat(seat['rstr_pct']||0)+parseFloat(seat['ind_pct']||0))/100
+        :raw/100;
+      const rb=REG_BASELINE[region];
+      const poll=effShare(region,party,nat)/100;
+      const base=(rb?(rb[party]||0):GB_2024[party]||0)/100;
+      const swing=poll-base, headroom=Math.max(0,1-local2024);
+      const mult=parseFloat(p[party+'_multiplier']||1)||1;
+      const frac=parseFloat(p[party+'_fraction']  ||0.2)||0.2;
+      shares[party]=Math.max(local2024*frac,Math.max(0,local2024+swing*headroom*2*mult));
     }
-
-    const total=Object.values(shares).reduce((a,b)=>a+b,0);
-    if(total>0) PARTIES.forEach(p=>shares[p]/=total);
-
+    const tot=Object.values(shares).reduce((a,b)=>a+b,0);
+    if(tot>0) PARTIES.forEach(p=>shares[p]/=tot);
     let winner='oth',best=0;
-    PARTIES.forEach(p=>{ if(shares[p]>best){best=shares[p];winner=p;} });
+    PARTIES.forEach(p=>{if(shares[p]>best){best=shares[p];winner=p;}});
     counts[winner]=(counts[winner]||0)+1;
   }
   return counts;
 }
 
 function runForecast() {
-  const national = getNational();
-  const seats    = runOptionC(national);
-
-  // Render results
+  const nat=getNational(), seats=runOptionC(nat);
   const grid=document.getElementById('results-grid');
   grid.innerHTML='';
   document.getElementById('results-wrap').style.display='block';
-
   const maxSeats=Math.max(...Object.values(seats),1);
   for (const p of TILE_ORDER) {
-    const count=seats[p]||0, prev=SEATS_2024[p]||0, diff=count-prev;
+    const count=seats[p]||0,prev=SEATS_2024[p]||0,diff=count-prev;
     const col=document.createElement('div');
     col.className='result-col';
     col.innerHTML=`
       <div class="party-label" style="color:${COLOURS[p]}">${LABELS[p]}</div>
       <div class="result-seats" style="color:${COLOURS[p]}">${count}</div>
       <div class="result-change" style="color:${COLOURS[p]}">${diff>=0?'+':''}${diff}</div>
-      <div class="result-bar-wrap"><div class="result-bar" style="background:${COLOURS[p]};width:${Math.round(count/maxSeats*100)}%"></div></div>
-    `;
+      <div class="result-bar-wrap"><div class="result-bar" style="background:${COLOURS[p]};width:${Math.round(count/maxSeats*100)}%"></div></div>`;
     grid.appendChild(col);
   }
-
   document.getElementById('scroll-btn').style.display='block';
-
-  // Broadcast national polling — map applies same regional deltas
-  window.parent.postMessage({action:'forecastUpdate', polling:national, seats},'*');
+  window.parent.postMessage({action:'forecastUpdate',polling:nat,seats},'*');
 }
 
 function scrollToMap() {
@@ -206,22 +194,18 @@ function scrollToMap() {
 
 async function init() {
   try {
-    const [pollRows, rRows, pRows] = await Promise.all([
-      fetchCSV(POLL_CSV, false),
-      fetchCSV(RESULTS_URL, true),
-      fetchCSV(PARAMS_CSV, false),
+    const [pollRows,rRows,pRows]=await Promise.all([
+      fetchCSV(POLL_CSV),fetchCSV(RESULTS_URL,true),fetchCSV(PARAMS_CSV)
     ]);
+    await loadBaselines();
+    resultRows=rRows;
+    pRows.forEach(r=>{const c=(r['PCON24CD']||'').trim();if(c)params[c]=r;});
 
-    resultRows = rRows;
-    pRows.forEach(r=>{ const c=(r['PCON24CD']||'').trim(); if(c) params[c]=r; });
-
-    const latest = pollRows[pollRows.length-1];
-
-    // Populate inputs — try lowercase keys first, then capitalised
-    const get = (p) => {
-      const cap = p.charAt(0).toUpperCase()+p.slice(1);
-      const v = parseFloat(latest[p]||latest[cap]||latest[p+'_pct']||BN[p]);
-      return isNaN(v) ? BN[p] : v;
+    const latest=pollRows[pollRows.length-1];
+    const get=p=>{
+      const cap=p.charAt(0).toUpperCase()+p.slice(1);
+      const v=parseFloat(latest[p]||latest[cap]||latest[p+'_pct']||GB_2024[p]);
+      return isNaN(v)?GB_2024[p]:v;
     };
 
     const grid=document.getElementById('inputs-grid');
@@ -233,8 +217,7 @@ async function init() {
         <div class="party-label" style="color:${COLOURS[p]}">${LABELS[p]}</div>
         <input class="party-input" id="inp_${p}" type="number" step="0.1" min="0" max="70"
           value="${val}" style="color:${COLOURS[p]};border-color:${COLOURS[p]}44"
-          oninput="updateTotal()">
-      `;
+          oninput="updateTotal()">`;
       grid.appendChild(col);
     }
 
@@ -242,16 +225,13 @@ async function init() {
     document.getElementById('inputs-wrap').style.display='block';
     document.getElementById('run-wrap').style.display='flex';
     updateTotal();
-
-    document.getElementById('status').textContent =
-      `Option C · ${rRows.length} seats · ${Object.keys(params).length} with parameters`;
-
+    document.getElementById('status').textContent=
+      `Option C · ${rRows.length} seats · ${Object.keys(params).length} with parameters · ${Object.keys(REG_BASELINE).length} regional baselines`;
   } catch(e) {
     document.getElementById('loading').textContent='Error: '+e.message;
     console.error(e);
   }
 }
-
 init();
 </script>
 </body>
