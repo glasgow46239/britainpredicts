@@ -124,19 +124,26 @@ function runOptionC(resultRows, natPoll, params) {
   return counts;
 }
 
-// ── Extract polling from CSV row ──────────────────────────────────────────────
-function extractPolling(row) {
+// ── Read polling from regional polling sheet ─────────────────────────────────
+// Sheet is tab-or-comma separated, region in col A. We want the GB-wide row.
+function extractPolling(rows) {
+  const gbRow = rows.find(r =>
+    (r['region']||r['Region']||Object.values(r)[0]||'').trim().toLowerCase() === 'gb-wide'
+  );
+  if (!gbRow) {
+    console.warn('GB-wide row not found in polling CSV — using GB_2024 fallback');
+    return {...GB_2024};
+  }
   const natPoll = {};
   PARTIES.forEach(p => {
-    const cap = p.charAt(0).toUpperCase() + p.slice(1);
-    const v = parseFloat(row[p] || row[cap] || row[p + '_pct'] || 0);
-    natPoll[p] = isNaN(v) ? 0 : v;
+    natPoll[p] = p === 'oth'
+      ? (parseFloat(gbRow['oth_pct']||0)||0) + (parseFloat(gbRow['rstr_pct']||0)||0)
+      : parseFloat(gbRow[p + '_pct'] || gbRow[p] || 0) || 0;
   });
-  // Sanity check — if total < 50 something went wrong, fall back to GB_2024
-  const total = Object.values(natPoll).reduce((a, b) => a + b, 0);
+  const total = Object.values(natPoll).reduce((a,b) => a+b, 0);
   if (total < 50) {
-    console.warn('Polling CSV parse suspicious total:', total, '— falling back to GB_2024');
-    PARTIES.forEach(p => natPoll[p] = GB_2024[p]);
+    console.warn('Polling total suspicious (' + total + ') — using GB_2024 fallback');
+    return {...GB_2024};
   }
   return natPoll;
 }
@@ -150,7 +157,7 @@ async function init() {
       fetchCSV(PARAMS_CSV),
     ]);
 
-    const natPoll = extractPolling(pollRows[pollRows.length - 1]);
+    const natPoll = extractPolling(pollRows);
 
     const params = {};
     paramRows.forEach(r => {
@@ -180,7 +187,7 @@ async function init() {
       tilesEl.appendChild(tile);
     }
 
-    const latest  = pollRows[pollRows.length - 1];
+    const latest  = pollRows.find(r => (r['region']||r['Region']||Object.values(r)[0]||'').trim().toLowerCase()==='gb-wide') || pollRows[0] || {};
     const pollDate = latest['date'] || latest['Date'] || 'latest polls';
     document.getElementById('updated').textContent = `Forecast based on ${pollDate} polling`;
     document.getElementById('status').textContent =
