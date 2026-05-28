@@ -101,21 +101,30 @@ async function fetchCSV(url,raw=false) {
 }
 
 async function loadBaselines() {
-  const rows=await fetchCSV(BASELINES_CSV);
-  for (const row of rows) {
-    const region=(row['region']||row['Region']||Object.values(row)[0]||'').trim();
-    if(!region||region.toLowerCase()==='gb-wide') continue;
-    REG_BASELINE[region]={
-      con: parseFloat(row['con_pct'] ||0)||0,
-      lab: parseFloat(row['lab_pct'] ||0)||0,
-      ldem:parseFloat(row['ldem_pct']||0)||0,
-      grn: parseFloat(row['grn_pct'] ||0)||0,
-      snp: parseFloat(row['snp_pct'] ||0)||0,
-      pc:  parseFloat(row['pc_pct']  ||0)||0,
-      ref: parseFloat(row['ref_pct'] ||0)||0,
-      oth:(parseFloat(row['oth_pct'] ||0)||0)+(parseFloat(row['rstr_pct']||0)||0),
-    };
-  }
+  try {
+    const r = await fetch(BASELINES_CSV + '&cb=' + Date.now());
+    const text = await r.text();
+    const lines = text.trim().split('\n').filter(l=>l.trim());
+    const sep = lines[0].includes('\t') ? '\t' : ',';
+    const headers = lines[0].split(sep).map(h=>h.trim());
+    for (const line of lines.slice(1)) {
+      const vals = line.split(sep).map(v=>v.trim());
+      const row = {};
+      headers.forEach((h,i) => row[h] = vals[i]||'');
+      const region = (row['region']||row['Region']||'').trim();
+      if (!region || region.toLowerCase()==='gb-wide') continue;
+      REG_BASELINE[region] = {
+        con:  parseFloat(row['con_pct'] ||0)||0,
+        lab:  parseFloat(row['lab_pct'] ||0)||0,
+        ldem: parseFloat(row['ldem_pct']||0)||0,
+        grn:  parseFloat(row['grn_pct'] ||0)||0,
+        snp:  parseFloat(row['snp_pct'] ||0)||0,
+        pc:   parseFloat(row['pc_pct']  ||0)||0,
+        ref:  parseFloat(row['ref_pct'] ||0)||0,
+        oth: (parseFloat(row['oth_pct'] ||0)||0)+(parseFloat(row['rstr_pct']||0)||0),
+      };
+    }
+  } catch(e) { console.warn('Baselines fetch failed:', e); }
 }
 
 function effShare(region,party,nat) {
