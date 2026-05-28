@@ -3,144 +3,173 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Britain Predicts — Forecast</title>
+<title>Britain Predicts</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 body { font-family:'Arial',sans-serif; background:#fff; }
-#header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px 8px; border-bottom:2px solid #111; }
-#brand { font-size:13px; font-weight:700; color:#111; letter-spacing:0.02em; }
-#updated { font-size:10px; color:#888; margin-top:2px; }
-#tiles { display:flex; justify-content:flex-end; gap:6px; padding:10px 16px 10px 8px; flex-wrap:wrap; }
-.tile { display:flex; flex-direction:column; align-items:center; min-width:70px; padding:6px 8px 5px; border-radius:4px; }
-.tile-party { font-size:9px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; margin-bottom:3px; }
-.tile-seats { font-size:22px; font-weight:700; line-height:1; }
-.tile-change { font-size:10px; margin-top:3px; opacity:0.85; }
-.tile-bar { width:100%; height:3px; border-radius:2px; margin-top:5px; opacity:0.5; }
-#status { text-align:right; font-size:9px; color:#bbb; padding:0 16px 6px; }
-#loading { text-align:center; padding:30px; color:#aaa; font-size:13px; }
+
+#loading { padding:24px; color:#999; font-size:13px; text-align:center; }
+#error   { padding:24px; color:#c00; font-size:12px; }
+
+#wrap { display:none; }
+
+#header { padding:10px 16px 8px; border-bottom:2px solid #111; }
+#brand  { font-size:14px; font-weight:700; color:#111; }
+#sub    { font-size:10px; color:#999; margin-top:2px; }
+
+#tiles {
+  display:flex; flex-wrap:wrap; gap:6px;
+  padding:12px 16px 8px;
+}
+.tile {
+  flex:1; min-width:64px; max-width:120px;
+  display:flex; flex-direction:column; align-items:center;
+  padding:8px 6px 6px; border-radius:5px;
+  cursor:default;
+}
+.t-party  { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+.t-seats  { font-size:26px; font-weight:700; line-height:1; }
+.t-change { font-size:10px; margin-top:3px; opacity:.85; }
+.t-bar    { width:100%; height:3px; border-radius:2px; margin-top:6px; opacity:.45; }
+
+#btns {
+  display:flex; gap:8px; padding:8px 16px 12px;
+}
+.btn {
+  flex:1; padding:9px 12px; border:none; border-radius:4px;
+  font-size:12px; font-weight:700; cursor:pointer; letter-spacing:.02em;
+}
+.btn-dark { background:#111; color:#fff; }
+.btn-dark:hover { background:#333; }
+.btn-light { background:#f0ede8; color:#111; }
+.btn-light:hover { background:#e5e0da; }
+
+#status { font-size:9px; color:#ccc; text-align:right; padding:0 16px 6px; }
 </style>
 </head>
 <body>
-<div id="header">
-  <div>
+
+<div id="loading">Loading forecast…</div>
+<div id="error" style="display:none"></div>
+
+<div id="wrap">
+  <div id="header">
     <div id="brand">Britain Predicts</div>
-    <div id="updated">Loading forecast…</div>
+    <div id="sub">Loading…</div>
   </div>
+  <div id="tiles"></div>
+  <div id="btns">
+    <button class="btn btn-dark"  onclick="window.parent.postMessage({action:'scrollToCalculator'},'*')">Create your own forecast</button>
+    <button class="btn btn-light" onclick="window.parent.postMessage({action:'scrollToMap'},'*')">Map</button>
+  </div>
+  <div id="status"></div>
 </div>
-<div id="loading">Fetching latest data…</div>
-<div id="tiles" style="display:none"></div>
-<div id="status"></div>
 
 <script>
-// ── URLs ──────────────────────────────────────────────────────────────────────
+// ── Config ────────────────────────────────────────────────────────────────────
 const POLL_CSV    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=0&single=true&output=csv";
 const RESULTS_URL = "https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv";
 const PARAMS_CSV  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=1932049493&single=true&output=csv";
 
-// ── Party config ──────────────────────────────────────────────────────────────
 const PARTIES    = ['con','lab','ldem','grn','snp','pc','ref','oth'];
-const TILE_ORDER = ['grn','lab','snp','pc','ldem','oth','con','ref'];
+const TILE_ORDER = ['lab','ref','con','ldem','grn','snp','pc','oth'];
 const LABELS     = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Reform',oth:'Other'};
 const COLOURS    = {con:'#0087DC',lab:'#E4003B',ldem:'#FAA61A',grn:'#02A95B',snp:'#C8A400',pc:'#3F8428',ref:'#12B6CF',oth:'#57534e'};
 const SEATS_2024 = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
-const GB_2024    = {con:23.7,lab:33.7,ldem:12.2,grn:6.4,snp:2.5,pc:0.7,ref:14.3,oth:9.7};
-
-// ── Regional 2024 baselines (hardcoded — source of truth) ─────────────────────
-const REG_BASELINE = {
-  'Scotland':         {con:12.7,lab:35.3,ldem:9.7, grn:3.8, snp:30.0,pc:0,   ref:7.0, oth:1.5},
-  'Wales':            {con:18.2,lab:37.0,ldem:6.5, grn:4.7, snp:0,   pc:14.8,ref:16.9,oth:1.9},
-  'Northern England': {con:19.6,lab:43.6,ldem:6.9, grn:7.2, snp:0,   pc:0,   ref:17.4,oth:5.3},
-  'Southern England': {con:29.7,lab:26.5,ldem:19.4,grn:7.1, snp:0,   pc:0,   ref:15.1,oth:2.1},
-  'Midlands':         {con:27.7,lab:35.2,ldem:7.3, grn:6.4, snp:0,   pc:0,   ref:18.6,oth:4.8},
-  'London':           {con:20.6,lab:43.0,ldem:11.0,grn:10.0,snp:0,   pc:0,   ref:8.7, oth:6.7},
-};
+const GB_2024    = {con:23.7,lab:33.7,ldem:12.2,grn:6.4,snp:2.5,pc:0.7,ref:14.3,oth:6.2};
 
 // ── CSV parser ────────────────────────────────────────────────────────────────
-function parseCSVText(text) {
+function parseCSV(text) {
   const lines = text.trim().split('\n').filter(l => l.trim());
   if (!lines.length) return [];
+  // Auto-detect separator
   const sep = lines[0].includes('\t') ? '\t' : ',';
   const headers = lines[0].split(sep).map(h => h.trim());
   return lines.slice(1).map(line => {
     const vals = line.split(sep).map(v => v.trim());
     const obj = {};
-    headers.forEach((h, i) => obj[h] = vals[i] || '');
+    headers.forEach((h, i) => obj[h] = vals[i] !== undefined ? vals[i] : '');
     return obj;
   });
 }
 
 async function fetchCSV(url) {
-  const r = await fetch(url + (url.includes('?') ? '&' : '?') + 'cb=' + Date.now());
-  if (!r.ok) throw new Error('HTTP ' + r.status + ' fetching ' + url);
-  return parseCSVText(await r.text());
+  const sep = url.includes('?') ? '&' : '?';
+  const r = await fetch(url + sep + '_=' + Date.now());
+  if (!r.ok) throw new Error('Fetch failed: ' + url + ' (' + r.status + ')');
+  return parseCSV(await r.text());
 }
 
-// ── Current regional polling ──────────────────────────────────────────────────
-// Updated from your polling sheet. Used as the default (zero-swing) state.
-// When the user runs the calculator, swings are applied on top of REG_BASELINE.
-const REG_POLL = {
-  'Scotland':         {con:10.3,lab:17.3,ldem:9.0, grn:7.9, snp:32.4,pc:0,   ref:20.2,oth:2.9},
-  'Wales':            {con:12.8,lab:18.7,ldem:7.3, grn:7.1, snp:0,   pc:26.2,ref:26.9,oth:1.0},
-  'Northern England': {con:14.5,lab:22.4,ldem:9.6, grn:18.2,snp:0,   pc:0,   ref:30.2,oth:5.1},
-  'Southern England': {con:21.2,lab:13.8,ldem:19.4,grn:15.7,snp:0,   pc:0,   ref:25.7,oth:4.2},
-  'Midlands':         {con:21.5,lab:18.4,ldem:9.0, grn:18.0,snp:0,   pc:0,   ref:28.1,oth:5.0},
-  'London':           {con:18.7,lab:26.4,ldem:13.1,grn:22.9,snp:0,   pc:0,   ref:15.3,oth:3.6},
-};
-
-// ── Effective regional share ──────────────────────────────────────────────────
-// natPoll === null  → direct mode: use REG_POLL[region] as the poll (default load)
-// natPoll = object  → swing mode: REG_BASELINE[region] + (natPoll[party] - GB_2024[party])
-function effShare(region, party, natPoll) {
-  if (natPoll === null) {
-    // Direct mode — use current regional polling straight
-    const rp = REG_POLL[region];
-    if (rp) return Math.max(0, rp[party] || 0);
-    return Math.max(0, GB_2024[party] || 0);
+// ── Parse polling CSV into a region → party → % map ──────────────────────────
+function buildPollMap(rows) {
+  const map = {};
+  for (const row of rows) {
+    // Region name is in the 'region' column (or first column)
+    const region = (row['region'] || row['Region'] || Object.values(row)[0] || '').trim();
+    if (!region) continue;
+    map[region] = {
+      con:  parseFloat(row['con_pct']  || 0) || 0,
+      lab:  parseFloat(row['lab_pct']  || 0) || 0,
+      ldem: parseFloat(row['ldem_pct'] || 0) || 0,
+      grn:  parseFloat(row['grn_pct']  || 0) || 0,
+      snp:  parseFloat(row['snp_pct']  || 0) || 0,
+      pc:   parseFloat(row['pc_pct']   || 0) || 0,
+      ref:  parseFloat(row['ref_pct']  || 0) || 0,
+      oth:  (parseFloat(row['oth_pct'] || 0) || 0) + (parseFloat(row['rstr_pct'] || 0) || 0),
+    };
   }
-  // Swing mode — apply national swing on top of 2024 regional baseline
-  const rb = REG_BASELINE[region];
-  if (!rb) return Math.max(0, natPoll[party] || 0);
-  const swing = (natPoll[party] || 0) - (GB_2024[party] || 0);
-  return Math.max(0, (rb[party] || 0) + swing);
+  return map;
 }
 
 // ── Option C model ────────────────────────────────────────────────────────────
-function runOptionC(resultRows, natPoll, params) {
+// pollMap: region → {con, lab, ...} — the POLL for each region
+// For each seat, the swing is: poll[region][party] - baseline_2024[region][party]
+// baseline_2024 is embedded in the results CSV (the 2024 local result IS the baseline)
+// Actually: swing vs 2024 national average, applied from each region's current poll
+// The cleanest version: use the regional poll % directly as the effective vote in that region
+// Then apply the STM formula with regional poll as the "new national" and 2024 local as the base
+function runModel(resultRows, pollMap, params) {
   const counts = {};
   PARTIES.forEach(p => counts[p] = 0);
 
   for (const seat of resultRows) {
-    const code   = (seat['PCON24CD'] || seat['pcon24cd'] || '').trim();
-    const region = (seat['Region']   || seat['region']   || '').trim();
+    const code   = (seat['PCON24CD'] || '').trim();
+    const region = (seat['Region']   || '').trim();
     if (!code || region === 'Northern Ireland') continue;
 
+    // Get the regional poll — fall back to GB-wide if region not found
+    const regPoll = pollMap[region] || pollMap['GB-wide'] || {};
     const p = params[code] || {};
     const shares = {};
 
     for (const party of PARTIES) {
-      const raw = parseFloat(seat[party + '_pct'] || seat[party + 'pct'] || seat[party] || 0);
+      // 2024 local vote share
+      const raw = parseFloat(seat[party + '_pct'] || 0);
       const local2024 = party === 'oth'
         ? (raw + parseFloat(seat['rstr_pct'] || 0) + parseFloat(seat['ind_pct'] || 0)) / 100
         : raw / 100;
 
-      const rb       = REG_BASELINE[region];
-      const rp       = REG_POLL[region];
-      const poll     = effShare(region, party, natPoll) / 100;
-      // In direct mode (natPoll===null) baseline = REG_POLL so swing = 0
-      const baseline = natPoll === null
-        ? (rp ? (rp[party] || 0) : (GB_2024[party] || 0)) / 100
-        : (rb ? (rb[party] || 0) : (GB_2024[party] || 0)) / 100;
-      const swing    = poll - baseline;
+      // Regional poll for this party (what the region is currently polling at)
+      const regPollPct = (regPoll[party] || 0) / 100;
+
+      // Regional 2024 result for this party — we need this as the baseline
+      // Use GB_2024 scaled by region if not available
+      // Actually: swing = regPoll - gb2024, applied on top of local2024
+      // This is the standard uniform swing model, but using regional polls not national
+      const swing    = regPollPct - (GB_2024[party] || 0) / 100;
       const headroom = Math.max(0, 1 - local2024);
       const mult     = parseFloat(p[party + '_multiplier'] || 1) || 1;
       const frac     = parseFloat(p[party + '_fraction']   || 0.2) || 0.2;
+      const floor    = local2024 * frac;
 
-      shares[party] = Math.max(local2024 * frac, Math.max(0, local2024 + swing * headroom * 2 * mult));
+      shares[party] = Math.max(floor, Math.max(0, local2024 + swing * headroom * 2 * mult));
     }
 
+    // Normalise to 100%
     const total = Object.values(shares).reduce((a, b) => a + b, 0);
     if (total > 0) PARTIES.forEach(p => shares[p] /= total);
 
+    // Winner
     let winner = 'oth', best = 0;
     PARTIES.forEach(p => { if (shares[p] > best) { best = shares[p]; winner = p; } });
     counts[winner] = (counts[winner] || 0) + 1;
@@ -148,28 +177,28 @@ function runOptionC(resultRows, natPoll, params) {
   return counts;
 }
 
-// ── Read polling from regional polling sheet ─────────────────────────────────
-// Sheet is tab-or-comma separated, region in col A. We want the GB-wide row.
-function extractPolling(rows) {
-  const gbRow = rows.find(r =>
-    (r['region']||r['Region']||Object.values(r)[0]||'').trim().toLowerCase() === 'gb-wide'
-  );
-  if (!gbRow) {
-    console.warn('GB-wide row not found in polling CSV — using GB_2024 fallback');
-    return {...GB_2024};
+// ── Render tiles ──────────────────────────────────────────────────────────────
+function renderTiles(seats) {
+  const el = document.getElementById('tiles');
+  el.innerHTML = '';
+
+  // Sort by seat count descending
+  const ordered = [...TILE_ORDER].sort((a, b) => (seats[b] || 0) - (seats[a] || 0));
+
+  for (const p of ordered) {
+    const count = seats[p] || 0;
+    const prev  = SEATS_2024[p] || 0;
+    const diff  = count - prev;
+    const tile  = document.createElement('div');
+    tile.className = 'tile';
+    tile.style.background = COLOURS[p] + '15';
+    tile.innerHTML = `
+      <div class="t-party"  style="color:${COLOURS[p]}">${LABELS[p]}</div>
+      <div class="t-seats"  style="color:${COLOURS[p]}">${count}</div>
+      <div class="t-change" style="color:${COLOURS[p]}">${diff >= 0 ? '+' : ''}${diff}</div>
+      <div class="t-bar"    style="background:${COLOURS[p]}"></div>`;
+    el.appendChild(tile);
   }
-  const natPoll = {};
-  PARTIES.forEach(p => {
-    natPoll[p] = p === 'oth'
-      ? (parseFloat(gbRow['oth_pct']||0)||0) + (parseFloat(gbRow['rstr_pct']||0)||0)
-      : parseFloat(gbRow[p + '_pct'] || gbRow[p] || 0) || 0;
-  });
-  const total = Object.values(natPoll).reduce((a,b) => a+b, 0);
-  if (total < 50) {
-    console.warn('Polling total suspicious (' + total + ') — using GB_2024 fallback');
-    return {...GB_2024};
-  }
-  return natPoll;
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -181,50 +210,37 @@ async function init() {
       fetchCSV(PARAMS_CSV),
     ]);
 
-    // Extract current GB-wide poll for display purposes
-    const currentPoll = extractPolling(pollRows);
-    // On load use null → direct regional polling mode (REG_POLL per region, no swing)
-    const natPoll = null;
+    const pollMap = buildPollMap(pollRows);
+    const gbPoll  = pollMap['GB-wide'];
+    if (!gbPoll) throw new Error('GB-wide row not found in polling CSV');
 
     const params = {};
-    paramRows.forEach(r => {
-      const c = (r['PCON24CD'] || '').trim();
-      if (c) params[c] = r;
-    });
+    paramRows.forEach(r => { const c = (r['PCON24CD'] || '').trim(); if (c) params[c] = r; });
 
-    const seats = runOptionC(resultRows, natPoll, params);
+    const seats = runModel(resultRows, pollMap, params);
 
-    // Render
+    // Show
     document.getElementById('loading').style.display = 'none';
-    const tilesEl = document.getElementById('tiles');
-    tilesEl.style.display = 'flex';
+    document.getElementById('wrap').style.display = 'block';
 
-    for (const p of TILE_ORDER) {
-      const count = seats[p] || 0;
-      const prev  = SEATS_2024[p] || 0;
-      const diff  = count - prev;
-      const tile  = document.createElement('div');
-      tile.className = 'tile';
-      tile.style.background = COLOURS[p] + '18';
-      tile.innerHTML = `
-        <div class="tile-party" style="color:${COLOURS[p]}">${LABELS[p]}</div>
-        <div class="tile-seats" style="color:${COLOURS[p]}">${count}</div>
-        <div class="tile-change" style="color:${COLOURS[p]}">${diff >= 0 ? '+' : ''}${diff}</div>
-        <div class="tile-bar" style="background:${COLOURS[p]}"></div>`;
-      tilesEl.appendChild(tile);
-    }
+    renderTiles(seats);
 
-    const latest  = pollRows.find(r => (r['region']||r['Region']||Object.values(r)[0]||'').trim().toLowerCase()==='gb-wide') || pollRows[0] || {};
-    const pollDate = latest['date'] || latest['Date'] || 'current regional polling';
-    document.getElementById('updated').textContent = `Forecast based on ${pollDate} polling`;
+    // Build subtitle from GB-wide poll
+    const parts = ['ref','lab','con','ldem'].map(p =>
+      `${LABELS[p]} ${(gbPoll[p] || 0).toFixed(1)}%`
+    ).join(' · ');
+    document.getElementById('sub').textContent = parts;
     document.getElementById('status').textContent =
-      `Option C · ${resultRows.length} seats · ${Object.keys(params).length} with parameters`;
+      `Option C · ${resultRows.length} seats · ${Object.keys(params).length} with parameters · ${Object.keys(pollMap).length} regions`;
 
-    window.parent.postMessage({ action: 'forecastUpdate', polling: natPoll, seats }, '*');
+    // Tell the map what to show
+    window.parent.postMessage({ action: 'forecastUpdate', pollMap }, '*');
 
   } catch (e) {
-    document.getElementById('loading').textContent = 'Error: ' + e.message;
-    console.error('iframe1 error:', e);
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = 'Error: ' + e.message;
+    console.error('iframe1:', e);
   }
 }
 

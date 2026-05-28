@@ -218,95 +218,71 @@ const CHOROPLETH_CEILINGS = { grn:50, lab:65, snp:60, pc:60, ldem:50, oth:30, co
 // ============================================================
 // CONFIG
 // ============================================================
-const RESULTS_URL  = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv';
-const PARAMS_URL   = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=1932049493&single=true&output=csv';
-let PARAMS = {}; // keyed by PCON24CD
-const GEO_URL     = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/parlcons_westmisnter.json';
-const NI_CODES    = new Set(['N06000001','N06000002','N06000003','N06000004','N06000005','N06000006','N06000007','N06000008','N06000009','N06000010','N06000011','N06000012']);
+const RESULTS_URL = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv';
+const PARAMS_URL  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=1932049493&single=true&output=csv';
+const POLL_CSV    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=0&single=true&output=csv';
+let PARAMS = {};
+const GEO_URL  = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/parlcons_westmisnter.json';
+const NI_CODES = new Set(['N06000001','N06000002','N06000003','N06000004','N06000005','N06000006','N06000007','N06000008','N06000009','N06000010','N06000011','N06000012']);
 const WM = {'Con':'con','Lab':'lab','LDem':'ldem','LD':'ldem','Grn':'grn','Green':'grn','SNP':'snp','PC':'pc','Reform':'ref','Ref':'ref','Ind':'oth','Other':'oth','Oth':'oth','Alba':'oth','Speaker':'oth','SDLP':'oth','UUP':'oth','DUP':'oth','SF':'oth','Alliance':'oth','APNI':'oth','TUV':'oth','RSTR':'oth','Restore':'oth'};
 
-// STM constants
-const MP   = ['con','lab','ldem','grn','snp','pc','ref','oth'];
-const GB_2024 = {con:23.7,lab:33.7,ldem:12.2,grn:6.4,snp:2.5,pc:0.7,ref:14.3,oth:9.7};
+const MP     = ['con','lab','ldem','grn','snp','pc','ref','oth'];
+const GB_2024 = {con:23.7,lab:33.7,ldem:12.2,grn:6.4,snp:2.5,pc:0.7,ref:14.3,oth:6.2};
 
-// ── Regional 2024 baselines (hardcoded — cannot be overwritten with bad data) ─
-const REG_BASELINE = {
-  'Scotland':         {con:12.7,lab:35.3,ldem:9.7, grn:3.8, snp:30.0,pc:0,   ref:7.0, oth:1.5},
-  'Wales':            {con:18.2,lab:37.0,ldem:6.5, grn:4.7, snp:0,   pc:14.8,ref:16.9,oth:1.9},
-  'Northern England': {con:19.6,lab:43.6,ldem:6.9, grn:7.2, snp:0,   pc:0,   ref:17.4,oth:5.3},
-  'Southern England': {con:29.7,lab:26.5,ldem:19.4,grn:7.1, snp:0,   pc:0,   ref:15.1,oth:2.1},
-  'Midlands':         {con:27.7,lab:35.2,ldem:7.3, grn:6.4, snp:0,   pc:0,   ref:18.6,oth:4.8},
-  'London':           {con:20.6,lab:43.0,ldem:11.0,grn:10.0,snp:0,   pc:0,   ref:8.7, oth:6.7},
-};
+// Current poll map — keyed by region name, populated on load and updated by iframe2
+let POLL_MAP = {};
 
-// Current national polling — updated when calculator broadcasts
-let national = null; // null = direct regional polling mode; set to object when user runs calculator
-
-// ── Current regional polling ──────────────────────────────────────────────────
-// Updated from your polling sheet. Used as the default (zero-swing) state.
-// When the user runs the calculator, swings are applied on top of REG_BASELINE.
-const REG_POLL = {
-  'Scotland':         {con:10.3,lab:17.3,ldem:9.0, grn:7.9, snp:32.4,pc:0,   ref:20.2,oth:2.9},
-  'Wales':            {con:12.8,lab:18.7,ldem:7.3, grn:7.1, snp:0,   pc:26.2,ref:26.9,oth:1.0},
-  'Northern England': {con:14.5,lab:22.4,ldem:9.6, grn:18.2,snp:0,   pc:0,   ref:30.2,oth:5.1},
-  'Southern England': {con:21.2,lab:13.8,ldem:19.4,grn:15.7,snp:0,   pc:0,   ref:25.7,oth:4.2},
-  'Midlands':         {con:21.5,lab:18.4,ldem:9.0, grn:18.0,snp:0,   pc:0,   ref:28.1,oth:5.0},
-  'London':           {con:18.7,lab:26.4,ldem:13.1,grn:22.9,snp:0,   pc:0,   ref:15.3,oth:3.6},
-};
-
-// ── Effective regional share ──────────────────────────────────────────────────
-// natPoll === null  → direct mode: use REG_POLL[region] as the poll (default load)
-// natPoll = object  → swing mode: REG_BASELINE[region] + (natPoll[party] - GB_2024[party])
-function effShare(region, party, natPoll) {
-  if (natPoll === null) {
-    // Direct mode — use current regional polling straight
-    const rp = REG_POLL[region];
-    if (rp) return Math.max(0, rp[party] || 0);
-    return Math.max(0, GB_2024[party] || 0);
+// ── CSV parser ────────────────────────────────────────────────────────────────
+function parseCSVLine(line){const f=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const ch=line[i];if(inQ){if(ch==='"'&&line[i+1]==='"'){cur+='"';i++;}else if(ch==='"'){inQ=false;}else{cur+=ch;}}else{if(ch==='"'){inQ=true;}else if(ch===','){f.push(cur.trim());cur='';}else{cur+=ch;}}}f.push(cur.trim());return f;}
+function parseCSV(text){
+  const lines=text.trim().split('\n').filter(l=>l.trim());
+  // Auto-detect separator
+  const sep = lines[0].includes('\t') ? '\t' : ',';
+  if(sep===','){
+    const h=parseCSVLine(lines[0]);
+    return lines.slice(1).filter(l=>l.trim()).map(l=>{const v=parseCSVLine(l),o={};h.forEach((k,i)=>o[k.trim()]=v[i]??'');return o;});
+  } else {
+    const h=lines[0].split('\t').map(s=>s.trim());
+    return lines.slice(1).filter(l=>l.trim()).map(l=>{const v=l.split('\t').map(s=>s.trim()),o={};h.forEach((k,i)=>o[k]=v[i]??'');return o;});
   }
-  // Swing mode — apply national swing on top of 2024 regional baseline
-  const rb = REG_BASELINE[region];
-  if (!rb) return Math.max(0, natPoll[party] || 0);
-  const swing = (natPoll[party] || 0) - (GB_2024[party] || 0);
-  return Math.max(0, (rb[party] || 0) + swing);
 }
 
-// ============================================================
-// CSV parser — RFC 4180 compliant
-// ============================================================
-function parseCSVLine(line){const f=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const ch=line[i];if(inQ){if(ch==='"'&&line[i+1]==='"'){cur+='"';i++;}else if(ch==='"'){inQ=false;}else{cur+=ch;}}else{if(ch==='"'){inQ=true;}else if(ch===','){f.push(cur.trim());cur='';}else{cur+=ch;}}}f.push(cur.trim());return f;}
-function parseCSV(text){const lines=text.trim().split('\n'),h=parseCSVLine(lines[0]);return lines.slice(1).filter(l=>l.trim()).map(l=>{const v=parseCSVLine(l),o={};h.forEach((k,i)=>o[k.trim()]=v[i]??'');return o;});}
+function buildPollMap(rows) {
+  const map = {};
+  for (const row of rows) {
+    const region = (row['region']||row['Region']||Object.values(row)[0]||'').trim();
+    if (!region) continue;
+    map[region] = {
+      con:  parseFloat(row['con_pct']  ||0)||0,
+      lab:  parseFloat(row['lab_pct']  ||0)||0,
+      ldem: parseFloat(row['ldem_pct'] ||0)||0,
+      grn:  parseFloat(row['grn_pct']  ||0)||0,
+      snp:  parseFloat(row['snp_pct']  ||0)||0,
+      pc:   parseFloat(row['pc_pct']   ||0)||0,
+      ref:  parseFloat(row['ref_pct']  ||0)||0,
+      oth:  (parseFloat(row['oth_pct'] ||0)||0)+(parseFloat(row['rstr_pct']||0)||0),
+    };
+  }
+  return map;
+}
 
-// ============================================================
-// STM MODEL
-// ============================================================
-// ── Option C STM model ────────────────────────────────────────────────────────
-// Formula: projected = MAX(floor, local + swing × headroom × 2 × multiplier)
-// Floor   = 2024 local vote × fraction (from PARAMS CSV, per seat per party)
-// Mult    = constituency demographic multiplier (from PARAMS CSV, per seat per party)
-
-function optionC(seat, overridePolling){
-  const code = seat.code;
-  const p    = PARAMS[code] || {};
-  const base = seat.votes;
-  const nat  = overridePolling !== undefined ? overridePolling : national;
-  const pr   = {};
+// ── Option C model ────────────────────────────────────────────────────────────
+function optionC(seat, pollMap) {
+  const code    = seat.code;
+  const p       = PARAMS[code] || {};
+  const base    = seat.votes;
+  const pm      = pollMap || POLL_MAP;
+  const regPoll = pm[seat.region] || pm['GB-wide'] || GB_2024;
+  const pr      = {};
 
   MP.forEach(party => {
-    const local2024  = base[party] || 0;
-    const poll       = effShare(seat.region, party, nat) / 100;
-    // In direct mode (nat===null) baseline = REG_POLL so swing = 0
-    // In swing mode baseline = REG_BASELINE so swing = poll - 2024 regional result
-    const rb  = REG_BASELINE[seat.region];
-    const rp  = REG_POLL[seat.region];
-    const baseline = nat === null
-      ? (rp ? (rp[party]||0) : (GB_2024[party]||0)) / 100
-      : (rb ? (rb[party]||0) : (GB_2024[party]||0)) / 100;
-    const swing      = poll - baseline;
-    const headroom   = Math.max(0, 1 - local2024);
-    const mult       = parseFloat(p[party + '_multiplier'] || 1.0) || 1.0;
-    const frac       = parseFloat(p[party + '_fraction']   || 0.2) || 0.2;
-    const floor      = local2024 * frac;
+    const local2024    = base[party] || 0;
+    const regPollPct   = (regPoll[party] || 0) / 100;
+    const swing        = regPollPct - (GB_2024[party] || 0) / 100;
+    const headroom     = Math.max(0, 1 - local2024);
+    const mult         = parseFloat(p[party + '_multiplier'] || 1.0) || 1.0;
+    const frac         = parseFloat(p[party + '_fraction']   || 0.2) || 0.2;
+    const floor        = local2024 * frac;
     pr[party] = Math.max(floor, Math.max(0, local2024 + swing * headroom * 2 * mult));
   });
 
@@ -316,49 +292,55 @@ function optionC(seat, overridePolling){
   return { winner: sorted[0], margin: ((pr[sorted[0]]||0) - (pr[sorted[1]]||0)) * 100, shares: pr };
 }
 
-// Keep stm as alias so any remaining references still work
+// stm alias for any legacy references
 function stm(seat){ return optionC(seat, null); }
 
 // ============================================================
 // DATA — keyed by PCON24CD
 // ============================================================
-let DATA = {}; // { code: { name, region, defender, votes, winner, margin, shares } }
+let DATA = {};
+
+function applyModelToAll(pollMap) {
+  Object.values(DATA).forEach(seat => {
+    const result   = optionC(seat, pollMap);
+    seat.winner    = result.winner;
+    seat.margin    = result.margin;
+    seat.shares    = result.shares;
+  });
+}
 
 async function loadData(){
   try{
-    const [rResp, pResp] = await Promise.all([
+    const [rResp, pResp, pollResp] = await Promise.all([
       fetch(RESULTS_URL),
-      fetch(PARAMS_URL + '&cb=' + Date.now())
+      fetch(PARAMS_URL + '&_=' + Date.now()),
+      fetch(POLL_CSV   + '&_=' + Date.now()),
     ]);
 
     // Load params
     if(pResp.ok){
-      const pRows = parseCSV(await pResp.text());
-      pRows.forEach(row => {
+      parseCSV(await pResp.text()).forEach(row => {
         const code = (row['PCON24CD']||'').trim();
         if(code) PARAMS[code] = row;
       });
     }
 
+    // Load polling
+    if(pollResp.ok){
+      POLL_MAP = buildPollMap(parseCSV(await pollResp.text()));
+    }
+
     if(!rResp.ok) throw new Error('results fetch failed');
-    const rows=parseCSV(await rResp.text());
-    rows.forEach(row=>{
-      const code=row['PCON24CD'], region=(row['Region']||'').trim();
-      if(!code||region==='Northern Ireland')return;
+    parseCSV(await rResp.text()).forEach(row=>{
+      const code   = row['PCON24CD'];
+      const region = (row['Region']||'').trim();
+      if(!code||region==='Northern Ireland') return;
       const votes={};
       MP.forEach(p=>{votes[p]=p==='oth'?((parseFloat(row['oth_pct'])||0)+(parseFloat(row['rstr_pct'])||0)+(parseFloat(row['ind_pct'])||0))/100:(parseFloat(row[p+'_pct'])||0)/100;});
-      const defender=WM[(row['Winner']||'').trim()]||'oth';
-      const result=optionC({code,region,votes}, null);
-      DATA[code]={
-        code,
-        name: row['Constituency name'],
-        region,
-        defender,
-        votes,
-        winner: result.winner,
-        margin: result.margin,
-        shares: result.shares,
-      };
+      const defender = WM[(row['Winner']||'').trim()]||'oth';
+      const result   = optionC({code,region,votes}, POLL_MAP);
+      DATA[code] = { code, name:row['Constituency name'], region, defender, votes,
+                     winner:result.winner, margin:result.margin, shares:result.shares };
     });
   }catch(e){console.warn('Data load failed:',e);}
 }
@@ -664,27 +646,28 @@ function initSearch(geojsonData,map,isWideFn){
 // ============================================================
 // FORECAST UPDATE (from iframe 2 via parent relay)
 // ============================================================
-window.addEventListener('message',e=>{
-  if(!e.data||e.data.action!=='forecastUpdate') return;
-  // Update the national polling store
-  if(e.data.polling) Object.assign(national, e.data.polling);
+// ============================================================
+// FORECAST UPDATE (from iframe2 via parent relay)
+// ============================================================
+window.addEventListener('message', e => {
+  if (!e.data || e.data.action !== 'forecastUpdate') return;
+  const pollMap = e.data.pollMap;
+  if (!pollMap) return;
 
-  // Rerun Option C for every seat with updated national polling
-  Object.keys(DATA).forEach(code=>{
-    const seat = DATA[code];
-    const result = optionC(seat, national);
-    seat.winner = result.winner;
-    seat.margin = result.margin;
-    seat.shares = result.shares;
-  });
+  // Update stored poll map
+  Object.assign(POLL_MAP, pollMap);
+
+  // Rerun model for every seat
+  applyModelToAll(POLL_MAP);
 
   // Recolour the map
-  if(window._map&&window._map.isStyleLoaded()){
-    const expr=buildColorMatch();
-    window._map.setPaintProperty('cons-fill','fill-color',expr);
-    window._map.setPaintProperty('cons-hover','fill-color',expr);
+  if (window._map && window._map.isStyleLoaded()) {
+    const expr = buildColorMatch();
+    window._map.setPaintProperty('cons-fill',  'fill-color', expr);
+    window._map.setPaintProperty('cons-hover', 'fill-color', expr);
   }
-  document.getElementById('live-badge').style.display='';
+  const badge = document.getElementById('live-badge');
+  if (badge) badge.style.display = '';
 });
 
 // ============================================================
