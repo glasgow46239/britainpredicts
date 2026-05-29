@@ -409,7 +409,7 @@ function runModel(pollMap) {
 
   for (const seat of resultRows) {
     const code   = (seat['PCON24CD'] || '').trim();
-    const region = (seat['Region']   || '').trim();
+    const region = (seat['Region'] || seat['region'] || '').trim();
     if (!code || region === 'Northern Ireland') continue;
 
     const regPoll = pollMap[region] || pollMap['GB-wide'] || {};

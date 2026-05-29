@@ -346,7 +346,7 @@ async function loadData(){
     if(!rResp.ok) throw new Error('results fetch failed');
     parseCSV(await rResp.text()).forEach(row=>{
       const code   = row['PCON24CD'];
-      const region = (row['Region']||'').trim();
+      const region = (row['Region']||row['region']||'').trim();
       if(!code||region==='Northern Ireland') return;
       const votes={};
       MP.forEach(p=>{votes[p]=p==='oth'?((parseFloat(row['oth_pct'])||0)+(parseFloat(row['rstr_pct'])||0)+(parseFloat(row['ind_pct'])||0))/100:(parseFloat(row[p+'_pct'])||0)/100;});
