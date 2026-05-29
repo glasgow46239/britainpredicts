@@ -293,7 +293,7 @@ function optionC(seat, pollMap) {
     const regBase2024  = (BASELINE_2024[seat.region] || BASELINE_2024['GB-wide'])[party] || 0;
     const swing        = regPollPct - regBase2024 / 100;
     const headroom     = Math.max(0, 1 - local2024);
-    const mult         = parseFloat(p[party + '_multiplier'] || 1.0) || 1.0;
+    const mult         = Math.min(1.7, Math.max(0.25, parseFloat(p[party + '_multiplier'] || 1.0) || 1.0));
     const frac         = parseFloat(p[party + '_fraction']   || 0.2) || 0.2;
     const floor        = local2024 * frac;
     pr[party] = Math.max(floor, Math.max(0, local2024 + swing * headroom * 2 * mult));
