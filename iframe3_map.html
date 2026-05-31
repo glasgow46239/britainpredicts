@@ -7,6 +7,14 @@
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+/* ── Table column widths — adjust these to taste ── */
+:root {
+  --col-party: 5rem;    /* Party name */
+  --col-pct:   2.5rem;  /* Pct. */
+  --col-bar:   4rem;    /* Bar */
+  --col-chg:   2.75rem; /* Chg. */
+}
+
 /* ── Root sizing: 1rem = 16px, respects user browser preferences ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{font-size:100%;}
@@ -75,10 +83,10 @@ body{font-family:'Roboto',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0
 /* Results table — shared by side panel and drawer */
 .results-table{width:100%;border-collapse:collapse;font-size:0.8125rem;table-layout:fixed;}
 .results-table thead th{font-size:0.625rem;text-transform:uppercase;letter-spacing:.06em;color:#aaa;font-weight:400;padding:0 0.1875rem 0.4375rem;}
-.results-table thead th:first-child{text-align:left;width:6rem;padding-left:0;}
-.results-table thead th:nth-child(2){text-align:right;width:2.5rem;}
-.results-table thead th:nth-child(3){width:3rem;}
-.results-table thead th:nth-child(4){text-align:right;width:2.75rem;}
+.results-table thead th:first-child{text-align:left;width:var(--col-party);padding-left:0;}
+.results-table thead th:nth-child(2){text-align:right;width:var(--col-pct);}
+.results-table thead th:nth-child(3){width:var(--col-bar);}
+.results-table thead th:nth-child(4){text-align:right;width:var(--col-chg);}
 .results-table tbody tr{border-top:1px solid #f5f5f5;}
 .results-table tbody td{padding:0.125rem 0.1875rem;vertical-align:middle;}
 .party-cell{display:flex;align-items:center;}
