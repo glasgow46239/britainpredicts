@@ -77,6 +77,7 @@ body{font-family:'Roboto',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0
 .results-table thead th{font-size:0.625rem;text-transform:uppercase;letter-spacing:.06em;color:#aaa;font-weight:400;padding:0 0.1875rem 0.4375rem;}
 .results-table thead th:first-child{text-align:left;width:6rem;padding-left:0;}
 .results-table thead th:nth-child(2){text-align:right;width:2.5rem;}
+.results-table thead th:nth-child(3){width:3rem;}
 .results-table thead th:nth-child(4){text-align:right;width:2.75rem;}
 .results-table tbody tr{border-top:1px solid #f5f5f5;}
 .results-table tbody td{padding:0.125rem 0.1875rem;vertical-align:middle;}
@@ -167,21 +168,6 @@ body{font-family:'Roboto',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0
 }
 #drawer-dismiss:hover{background:rgba(0,0,0,.35);}
 
-/* ── Expand toggle ── */
-#drawer-expand-row{
-  display:flex;align-items:center;justify-content:center;
-  padding:0.5rem 1rem 0.375rem;
-  border-bottom:1px solid #f0f0f0;
-}
-#drawer-toggle{
-  font-size:0.6875rem;font-weight:700;text-transform:uppercase;
-  letter-spacing:.07em;color:#555;
-  border:1px solid #e0e0e0;border-radius:1rem;
-  padding:0.25rem 0.875rem;cursor:pointer;
-  background:#fafafa;white-space:nowrap;
-  transition:background .15s;
-}
-#drawer-toggle:hover{background:#f0ede8;}
 
 /* ── Expanded body ── */
 #drawer-body{
@@ -277,9 +263,6 @@ body{font-family:'Roboto',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0
         </div>
         <button id="drawer-dismiss" aria-label="Close">&#10005;</button>
       </div>
-    </div>
-    <div id="drawer-expand-row">
-      <button id="drawer-toggle">Details &#8595;</button>
     </div>
     <div id="drawer-body"></div>
   </div>
@@ -551,24 +534,14 @@ function showSidePanel(code){
 let drawerState = 0;
 
 function setDrawerState(state) {
-  const drawer    = document.getElementById('drawer');
-  const body      = document.getElementById('drawer-body');
-  const toggle    = document.getElementById('drawer-toggle');
-  const expandRow = document.getElementById('drawer-expand-row');
+  const drawer = document.getElementById('drawer');
+  const body   = document.getElementById('drawer-body');
   if (state === 0) {
     drawer.style.transform = 'translateY(100%)';
     body.style.display = 'none';
-    expandRow.style.display = 'flex';
-  } else if (state === 1) {
-    drawer.style.transform = 'translateY(0)';
-    body.style.display = 'none';
-    expandRow.style.display = 'flex';
-    toggle.textContent = 'Details ↓';
   } else {
     drawer.style.transform = 'translateY(0)';
     body.style.display = 'block';
-    expandRow.style.display = 'none';
-    toggle.textContent = 'Details ↑';
   }
   drawerState = state;
 }
@@ -587,13 +560,8 @@ function showDrawer(code) {
     : winner.label + ' gain from ' + incumbent.label;
   document.getElementById('drawer-banner-name').textContent = d.name;
   document.getElementById('drawer-body').innerHTML = buildPanelBody(d);
-  setDrawerState(1);
+  setDrawerState(2);
 }
-
-// Toggle button: peek → expanded, expanded → peek
-document.getElementById('drawer-toggle').addEventListener('click', () => {
-  setDrawerState(drawerState === 2 ? 1 : 2);
-});
 
 // Dismiss × button
 document.getElementById('drawer-dismiss').addEventListener('click', (e) => {
@@ -611,15 +579,11 @@ document.getElementById('drawer-dismiss').addEventListener('click', (e) => {
   handle.addEventListener('touchend', e => {
     if (startY === null) return;
     const dy = startY - e.changedTouches[0].clientY; // positive = swipe up
-    if (Math.abs(dy) < 12) {
-      // Treat as tap: cycle
-      if (drawerState === 1) setDrawerState(2);
-      else if (drawerState === 2) setDrawerState(1);
-    } else if (dy > 0) {
-      setDrawerState(2);
-    } else {
-      setDrawerState(drawerState === 2 ? 1 : 0);
+    if (dy < -20) {
+      // Swipe down → dismiss
+      setDrawerState(0);
     }
+    // Swipe up or tap on handle → no-op (already expanded on tap)
     startY = null;
   }, { passive: true });
 })();
