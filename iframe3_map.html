@@ -221,7 +221,9 @@ const CHOROPLETH_CEILINGS = { grn:50, lab:65, snp:60, pc:60, ldem:50, oth:30, co
 const RESULTS_URL = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv';
 const PARAMS_URL  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=1932049493&single=true&output=csv';
 const POLL_CSV    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=0&single=true&output=csv';
-let PARAMS = {};
+const OVERRIDE_URL= 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=322317408&single=true&output=csv';
+const STANDING_URL= 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=804182419&single=true&output=csv';
+let PARAMS = {}, OVERRIDES = {}, STANDING = {};
 const GEO_URL  = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/parlcons_westmisnter.json';
 const NI_CODES = new Set(['N06000001','N06000002','N06000003','N06000004','N06000005','N06000006','N06000007','N06000008','N06000009','N06000010','N06000011','N06000012']);
 const WM = {'Con':'con','Lab':'lab','LDem':'ldem','LD':'ldem','Grn':'grn','Green':'grn','SNP':'snp','PC':'pc','Reform':'ref','Ref':'ref','Ind':'oth','Other':'oth','Oth':'oth','Alba':'oth','Speaker':'oth','SDLP':'oth','UUP':'oth','DUP':'oth','SF':'oth','Alliance':'oth','APNI':'oth','TUV':'oth','RSTR':'oth','Restore':'oth'};
@@ -277,32 +279,53 @@ function buildPollMap(rows) {
   return map;
 }
 
+const FRESH = {con:12,lab:10,ldem:8,grn:5,snp:18,pc:12,ref:16,oth:3};
+
 // ── Option C model ────────────────────────────────────────────────────────────
 function optionC(seat, pollMap) {
   const code    = seat.code;
   const p       = PARAMS[code] || {};
+  const ovr     = OVERRIDES[code] || {};
+  const std     = STANDING[code];
   const base    = seat.votes;
   const pm      = pollMap || POLL_MAP;
   const regPoll = pm[seat.region] || pm['GB-wide'] || GB_2024;
-  const pr      = {};
+  const regBase = BASELINE_2024[seat.region] || BASELINE_2024['GB-wide'];
+  const raw     = {};
 
   MP.forEach(party => {
-    const local2024    = base[party] || 0;
-    const regPollPct   = (regPoll[party] || 0) / 100;
-    // Swing vs regional 2024 result — NOT GB 2024 average
-    const regBase2024  = (BASELINE_2024[seat.region] || BASELINE_2024['GB-wide'])[party] || 0;
-    const swing        = regPollPct - regBase2024 / 100;
-    const headroom     = Math.max(0, 1 - local2024);
-    const mult         = Math.min(1.7, Math.max(0.25, parseFloat(p[party + '_multiplier'] || 1.0) || 1.0));
-    const frac         = parseFloat(p[party + '_fraction']   || 0.2) || 0.2;
-    const floor        = local2024 * frac;
-    pr[party] = Math.max(floor, Math.max(0, local2024 + swing * headroom * 2 * mult));
+    const isStanding = std ? std[party] : true;
+    if (!isStanding) { raw[party] = 0; return; }
+
+    let local2024 = base[party] || 0;
+    if (local2024 === 0 && isStanding) local2024 = (FRESH[party]||3) / 100;
+
+    const regPollPct = (regPoll[party]||0) / 100;
+    const regBasePct = (regBase[party]||0) / 100;
+    const swing      = regPollPct - regBasePct;
+    const headroom   = Math.max(0, 1 - local2024);
+    const mult       = Math.min(1.7, Math.max(0.25, parseFloat(p[party+'_multiplier']||1.0)||1.0));
+    const frac       = parseFloat(p[party+'_fraction']||0.2)||0.2;
+    const floor      = local2024 * frac;
+    raw[party] = Math.max(floor, Math.max(0, local2024 + swing * headroom * 2 * mult));
   });
 
-  const tot = Object.values(pr).reduce((a,b)=>a+b,0);
-  if(tot > 0) MP.forEach(p => pr[p] = (pr[p]||0) / tot);
-  const sorted = MP.slice().sort((a,b) => (pr[b]||0) - (pr[a]||0));
-  return { winner: sorted[0], margin: ((pr[sorted[0]]||0) - (pr[sorted[1]]||0)) * 100, shares: pr };
+  // Apply overrides — pin specified parties, rescale the rest
+  const pinnedParties = Object.keys(ovr);
+  if (pinnedParties.length > 0) {
+    const pinnedTotal  = pinnedParties.reduce((s,p) => s+ovr[p], 0);
+    const freeParties  = MP.filter(p => !pinnedParties.includes(p));
+    const freeRawTotal = freeParties.reduce((s,p) => s+(raw[p]||0), 0);
+    const freeScale    = freeRawTotal > 0 ? Math.max(0, 100-pinnedTotal)/freeRawTotal : 0;
+    pinnedParties.forEach(p => raw[p] = ovr[p]/100);
+    freeParties.forEach(p => raw[p] = (raw[p]||0)*freeScale/100);
+  } else {
+    const tot = MP.reduce((s,p) => s+(raw[p]||0), 0);
+    if (tot > 0) MP.forEach(p => raw[p] = (raw[p]||0)/tot);
+  }
+
+  const sorted = MP.slice().sort((a,b) => (raw[b]||0)-(raw[a]||0));
+  return { winner:sorted[0], margin:((raw[sorted[0]]||0)-(raw[sorted[1]]||0))*100, shares:raw };
 }
 
 // stm alias for any legacy references
@@ -324,17 +347,41 @@ function applyModelToAll(pollMap) {
 
 async function loadData(){
   try{
-    const [rResp, pResp, pollResp] = await Promise.all([
+    const [rResp, pResp, pollResp, oResp, sResp] = await Promise.all([
       fetch(RESULTS_URL),
-      fetch(PARAMS_URL + '&_=' + Date.now()),
-      fetch(POLL_CSV   + '&_=' + Date.now()),
+      fetch(PARAMS_URL   + '&_=' + Date.now()),
+      fetch(POLL_CSV     + '&_=' + Date.now()),
+      fetch(OVERRIDE_URL + '&_=' + Date.now()),
+      fetch(STANDING_URL + '&_=' + Date.now()),
     ]);
 
-    // Load params
+    // Params
     if(pResp.ok){
       parseCSV(await pResp.text()).forEach(row => {
         const code = (row['PCON24CD']||'').trim();
         if(code) PARAMS[code] = row;
+      });
+    }
+
+    // Overrides
+    if(oResp.ok){
+      parseCSV(await oResp.text()).forEach(row => {
+        const code = (row['PCON24CD']||'').trim(); if(!code) return;
+        const ovr = {};
+        ['con','lab','ldem','grn','snp','pc','ref','oth'].forEach(p => {
+          const v = parseFloat(row[p]); if(!isNaN(v) && row[p]!=='') ovr[p]=v;
+        });
+        if(Object.keys(ovr).length) OVERRIDES[code] = ovr;
+      });
+    }
+
+    // Standing
+    if(sResp.ok){
+      parseCSV(await sResp.text()).forEach(row => {
+        const code = (row['PCON24CD']||'').trim(); if(!code) return;
+        const std = {};
+        ['con','lab','ldem','grn','snp','pc','ref','oth'].forEach(p => { std[p] = row[p]!=='0'; });
+        STANDING[code] = std;
       });
     }
 
