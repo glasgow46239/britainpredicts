@@ -239,8 +239,11 @@ async function init() {
     document.getElementById('status').textContent =
       `Option C · ${resultRows.length} seats · ${Object.keys(params).length} params · ${Object.keys(overrides).length} overrides · ${Object.keys(standing).length} standing rows`;
 
-    _lastPollMap = pollMap;
-    window.parent.postMessage({ action:'forecastUpdate', pollMap }, '*');
+    _lastPollMap    = pollMap;
+    _lastParams     = params;
+    _lastOverrides  = overrides;
+    _lastStanding   = standing;
+    window.parent.postMessage({ action:'forecastUpdate', pollMap, params, overrides, standing }, '*');
   } catch(e) {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('error').style.display = 'block';
@@ -250,11 +253,12 @@ async function init() {
 }
 init();
 
-// Store last pollMap so we can rebroadcast if iframe3 requests it
-let _lastPollMap = null;
+// Store last broadcast data so we can rebroadcast on requestForecast
+let _lastPollMap = null, _lastParams = {}, _lastOverrides = {}, _lastStanding = {};
 window.addEventListener('message', e => {
   if (e.data && e.data.action === 'requestForecast' && _lastPollMap) {
-    window.parent.postMessage({ action: 'forecastUpdate', pollMap: _lastPollMap }, '*');
+    window.parent.postMessage({ action: 'forecastUpdate', pollMap: _lastPollMap,
+      params: _lastParams, overrides: _lastOverrides, standing: _lastStanding }, '*');
   }
 });
 </script>
