@@ -224,7 +224,7 @@ const CHOROPLETH_CEILINGS = { grn:50, lab:65, snp:60, pc:60, ldem:50, oth:30, co
 // ============================================================
 // CONFIG
 // ============================================================
-const BASE    = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=';
+const BASE        = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=';
 const POLL_CSV    = BASE + '0&single=true&output=csv';
 const PARAMS_URL  = BASE + '1932049493&single=true&output=csv';
 const OVERRIDE_URL= BASE + '322317408&single=true&output=csv';
@@ -234,9 +234,8 @@ const GEO_URL     = 'https://raw.githubusercontent.com/glasgow46239/britainpredi
 
 const NI_CODES = new Set(['N06000001','N06000002','N06000003','N06000004','N06000005','N06000006','N06000007','N06000008','N06000009','N06000010','N06000011','N06000012']);
 const WM = {Con:'con',Lab:'lab',LDem:'ldem',LD:'ldem',Grn:'grn',Green:'grn',SNP:'snp',PC:'pc',Reform:'ref',Ref:'ref',Ind:'oth',Other:'oth',Oth:'oth',Alba:'oth',Speaker:'oth',SDLP:'oth',UUP:'oth',DUP:'oth',SF:'oth',Alliance:'oth',APNI:'oth',TUV:'oth',RSTR:'oth'};
-
-const MP     = ['con','lab','ldem','grn','snp','pc','ref','oth'];
-const FRESH  = {con:12,lab:10,ldem:8,grn:5,snp:18,pc:12,ref:16,oth:3};
+const MP    = ['con','lab','ldem','grn','snp','pc','ref','oth'];
+const FRESH = {con:12,lab:10,ldem:8,grn:5,snp:18,pc:12,ref:16,oth:3};
 
 const BASELINE_2024 = {
   'GB-wide':         {con:23.7,lab:33.7,ldem:12.2,grn:6.4, snp:2.5, pc:0.7, ref:14.3,oth:6.2},
@@ -249,49 +248,66 @@ const BASELINE_2024 = {
 };
 
 // ============================================================
-// STATE — all model data lives here
+// STATE
 // ============================================================
-let PARAMS    = {};   // keyed by PCON24CD
-let OVERRIDES = {};   // keyed by PCON24CD
-let STANDING  = {};   // keyed by PCON24CD
-let POLL_MAP  = {};   // keyed by region name
-let DATA      = {};   // keyed by PCON24CD — seats with votes + current projection
+let PARAMS    = {};
+let OVERRIDES = {};
+let STANDING  = {};
+let POLL_MAP  = {};
+let DATA      = {};
 
 // ============================================================
 // CSV PARSER
 // ============================================================
 function parseCSVLine(line) {
-  const f=[]; let cur='',inQ=false;
-  for(let i=0;i<line.length;i++){
-    const ch=line[i];
-    if(inQ){if(ch==='"\'&&line[i+1]==='"\'){cur+='"';i++;}else if(ch==='"'){inQ=false;}else{cur+=ch;}}
-    else{if(ch==='"'){inQ=true;}else if(ch===','){f.push(cur.trim());cur='';}else{cur+=ch;}}
+  const Q = '\x22'; // double-quote character — avoids HTML parser conflict
+  const f = []; let cur = '', inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQ) {
+      if (ch === Q && line[i+1] === Q) { cur += Q; i++; }
+      else if (ch === Q) { inQ = false; }
+      else { cur += ch; }
+    } else {
+      if (ch === Q) { inQ = true; }
+      else if (ch === ',') { f.push(cur.trim()); cur = ''; }
+      else { cur += ch; }
+    }
   }
-  f.push(cur.trim()); return f;
+  f.push(cur.trim());
+  return f;
 }
 
 function parseCSV(text) {
-  const lines=text.trim().split('\n').filter(l=>l.trim());
-  if(!lines.length) return [];
-  const sep=lines[0].includes('\t')?'\t':',';
-  if(sep===','){
-    const h=parseCSVLine(lines[0]);
-    return lines.slice(1).filter(l=>l.trim()).map(l=>{const v=parseCSVLine(l),o={};h.forEach((k,i)=>o[k.trim()]=v[i]??''  );return o;});
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  if (!lines.length) return [];
+  const sep = lines[0].includes('\t') ? '\t' : ',';
+  if (sep === ',') {
+    const h = parseCSVLine(lines[0]);
+    return lines.slice(1).filter(l => l.trim()).map(l => {
+      const v = parseCSVLine(l), o = {};
+      h.forEach((k, i) => o[k.trim()] = v[i] != null ? v[i] : '');
+      return o;
+    });
   } else {
-    const h=lines[0].split('\t').map(s=>s.trim());
-    return lines.slice(1).filter(l=>l.trim()).map(l=>{const v=l.split('\t').map(s=>s.trim()),o={};h.forEach((k,i)=>o[k]=v[i]??''  );return o;});
+    const h = lines[0].split('\t').map(s => s.trim());
+    return lines.slice(1).filter(l => l.trim()).map(l => {
+      const v = l.split('\t').map(s => s.trim()), o = {};
+      h.forEach((k, i) => o[k] = v[i] != null ? v[i] : '');
+      return o;
+    });
   }
 }
 
-async function fetchWithRetry(url,retries=3){
-  for(let i=0;i<retries;i++){
-    try{
-      const r=await fetch(url+(url.includes('?')?'&':'?')+'_='+Date.now());
-      if(r.ok) return r;
-      if(i===retries-1) throw new Error('HTTP '+r.status);
-    }catch(e){
-      if(i===retries-1) throw e;
-      await new Promise(r=>setTimeout(r,800*(i+1)));
+async function fetchWithRetry(url, retries=3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const r = await fetch(url + (url.includes('?') ? '&' : '?') + '_=' + Date.now());
+      if (r.ok) return r;
+      if (i === retries-1) throw new Error('HTTP ' + r.status);
+    } catch(e) {
+      if (i === retries-1) throw e;
+      await new Promise(r => setTimeout(r, 800*(i+1)));
     }
   }
 }
@@ -300,15 +316,15 @@ async function fetchWithRetry(url,retries=3){
 // POLL MAP BUILDER
 // ============================================================
 function buildPollMap(rows) {
-  const map={};
-  for(const row of rows){
-    const region=(row['region']||row['Region']||Object.values(row)[0]||''  ).trim();
-    if(!region) continue;
-    map[region]={};
-    MP.forEach(p=>{
-      map[region][p]=p==='oth'
-        ?(parseFloat(row['oth_pct']||0)||0)+(parseFloat(row['rstr_pct']||0)||0)
-        :parseFloat(row[p+'_pct']||0)||0;
+  const map = {};
+  for (const row of rows) {
+    const region = (row['region'] || row['Region'] || Object.values(row)[0] || '').trim();
+    if (!region) continue;
+    map[region] = {};
+    MP.forEach(p => {
+      map[region][p] = p === 'oth'
+        ? (parseFloat(row['oth_pct'] || 0) || 0) + (parseFloat(row['rstr_pct'] || 0) || 0)
+        : parseFloat(row[p + '_pct'] || 0) || 0;
     });
   }
   return map;
@@ -318,161 +334,157 @@ function buildPollMap(rows) {
 // OPTION C MODEL
 // ============================================================
 function optionC(seat) {
-  const code=seat.code;
-  const p   =PARAMS[code]||{};
-  const ovr =OVERRIDES[code]||{};
-  const std =STANDING[code];
-  const base=seat.votes;
-  const regPoll=POLL_MAP[seat.region]||POLL_MAP['GB-wide']||{};
-  const regBase=BASELINE_2024[seat.region]||BASELINE_2024['GB-wide'];
-  const raw={};
+  const code = seat.code;
+  const p    = PARAMS[code] || {};
+  const ovr  = OVERRIDES[code] || {};
+  const std  = STANDING[code];
+  const base = seat.votes;
+  const regPoll = POLL_MAP[seat.region] || POLL_MAP['GB-wide'] || {};
+  const regBase = BASELINE_2024[seat.region] || BASELINE_2024['GB-wide'];
+  const raw = {};
 
-  MP.forEach(party=>{
-    const isStanding=std?std[party]:(base[party]>0); // default: only stood-in-2024 parties stand
-    if(!isStanding){raw[party]=0;return;}
+  MP.forEach(party => {
+    // If no standing row: only parties who stood in 2024 are standing by default
+    const isStanding = std ? std[party] : (base[party] > 0);
+    if (!isStanding) { raw[party] = 0; return; }
 
-    let local=base[party]||0;
-    if(local===0) local=(FRESH[party]||3)/100;
+    let local = base[party] || 0;
+    if (local === 0) local = (FRESH[party] || 3) / 100; // standing but didn't contest 2024
 
-    const poll =(regPoll[party]||0)/100;
-    const base2=(regBase[party]||0)/100;
-    const swing=poll-base2;
-    const hd   =Math.max(0,1-local);
-    const mult =Math.min(1.7,Math.max(0.25,parseFloat(p[party+'_multiplier']||1)||1));
-    const frac =parseFloat(p[party+'_fraction']||0.2)||0.2;
-    const floor=local*frac;
-    raw[party]=Math.max(floor,Math.max(0,local+swing*hd*2*mult));
+    const poll  = (regPoll[party] || 0) / 100;
+    const base2 = (regBase[party] || 0) / 100;
+    const swing = poll - base2;
+    const hd    = Math.max(0, 1 - local);
+    const mult  = Math.min(1.7, Math.max(0.25, parseFloat(p[party + '_multiplier'] || 1) || 1));
+    const frac  = parseFloat(p[party + '_fraction'] || 0.2) || 0.2;
+    const floor = local * frac;
+    raw[party]  = Math.max(floor, Math.max(0, local + swing * hd * 2 * mult));
   });
 
   // Apply overrides
-  const pinned=Object.keys(ovr);
-  if(pinned.length>0){
-    const pinnedTotal=pinned.reduce((s,p)=>s+ovr[p],0);
-    const free=MP.filter(p=>!pinned.includes(p));
-    const freeTotal=free.reduce((s,p)=>s+(raw[p]||0),0);
-    const scale=freeTotal>0?Math.max(0,100-pinnedTotal)/freeTotal:0;
-    pinned.forEach(p=>raw[p]=ovr[p]/100);
-    free.forEach(p=>raw[p]=(raw[p]||0)*scale/100);
+  const pinned = Object.keys(ovr);
+  if (pinned.length > 0) {
+    const pinnedTotal  = pinned.reduce((s, p) => s + ovr[p], 0);
+    const free         = MP.filter(p => !pinned.includes(p));
+    const freeTotal    = free.reduce((s, p) => s + (raw[p] || 0), 0);
+    const scale        = freeTotal > 0 ? Math.max(0, 100 - pinnedTotal) / freeTotal : 0;
+    pinned.forEach(p => raw[p] = ovr[p] / 100);
+    free.forEach(p   => raw[p] = (raw[p] || 0) * scale / 100);
   } else {
-    const tot=MP.reduce((s,p)=>s+(raw[p]||0),0);
-    if(tot>0) MP.forEach(p=>raw[p]=(raw[p]||0)/tot);
+    const tot = MP.reduce((s, p) => s + (raw[p] || 0), 0);
+    if (tot > 0) MP.forEach(p => raw[p] = (raw[p] || 0) / tot);
   }
 
-  const sorted=MP.slice().sort((a,b)=>(raw[b]||0)-(raw[a]||0));
-  return{winner:sorted[0],margin:((raw[sorted[0]]||0)-(raw[sorted[1]]||0))*100,shares:raw};
+  const sorted = MP.slice().sort((a, b) => (raw[b] || 0) - (raw[a] || 0));
+  return { winner: sorted[0], margin: ((raw[sorted[0]] || 0) - (raw[sorted[1]] || 0)) * 100, shares: raw };
 }
 
 // ============================================================
 // RUN MODEL — updates DATA and broadcasts seat counts
 // ============================================================
-function runModel(){
-  Object.values(DATA).forEach(seat=>{
-    const r=optionC(seat);
-    seat.winner=r.winner; seat.margin=r.margin; seat.shares=r.shares;
+function runModel() {
+  Object.values(DATA).forEach(seat => {
+    const r   = optionC(seat);
+    seat.winner = r.winner;
+    seat.margin = r.margin;
+    seat.shares = r.shares;
   });
 
-  // Count seats
-  const counts={};
-  Object.values(DATA).forEach(seat=>{
-    counts[seat.winner]=(counts[seat.winner]||0)+1;
+  // Count seats per winner
+  const counts = {};
+  Object.values(DATA).forEach(seat => {
+    counts[seat.winner] = (counts[seat.winner] || 0) + 1;
   });
 
-  // Broadcast to parent — iframe1 and iframe2 listen for this
-  window.parent.postMessage({action:'seatCounts',counts},'*');
+  // Broadcast to parent — iframe1 and iframe2 both receive this
+  window.parent.postMessage({ action: 'seatCounts', counts }, '*');
 }
 
 // ============================================================
 // DATA LOADING
 // ============================================================
-async function loadData(){
-  try{
-    // Fetch all sources in parallel
-    const [rResp,pResp,oResp,sResp,pollResp]=await Promise.all([
+async function loadData() {
+  try {
+    const [rResp, pResp, oResp, sResp, pollResp] = await Promise.all([
       fetchWithRetry(RESULTS_URL),
-      fetchWithRetry(PARAMS_URL+'&_='+Date.now()),
-      fetchWithRetry(OVERRIDE_URL+'&_='+Date.now()),
-      fetchWithRetry(STANDING_URL+'&_='+Date.now()),
-      fetchWithRetry(POLL_CSV+'&_='+Date.now()),
+      fetchWithRetry(PARAMS_URL  + '&_=' + Date.now()),
+      fetchWithRetry(OVERRIDE_URL + '&_=' + Date.now()),
+      fetchWithRetry(STANDING_URL + '&_=' + Date.now()),
+      fetchWithRetry(POLL_CSV    + '&_=' + Date.now()),
     ]);
 
-    // Params
-    if(pResp&&pResp.ok){
-      parseCSV(await pResp.text()).forEach(row=>{
-        const code=(row['PCON24CD']||''  ).trim();
-        if(code) PARAMS[code]=row;
+    if (pResp && pResp.ok) {
+      parseCSV(await pResp.text()).forEach(row => {
+        const code = (row['PCON24CD'] || '').trim();
+        if (code) PARAMS[code] = row;
       });
     }
 
-    // Overrides
-    if(oResp&&oResp.ok){
-      parseCSV(await oResp.text()).forEach(row=>{
-        const code=(row['PCON24CD']||''  ).trim(); if(!code) return;
-        const ovr={};
-        MP.forEach(p=>{const v=parseFloat(row[p]);if(!isNaN(v)&&v>0&&row[p]!==''&&row[p]!=='0')ovr[p]=v;});
-        if(Object.keys(ovr).length) OVERRIDES[code]=ovr;
+    if (oResp && oResp.ok) {
+      parseCSV(await oResp.text()).forEach(row => {
+        const code = (row['PCON24CD'] || '').trim(); if (!code) return;
+        const ovr = {};
+        MP.forEach(p => { const v = parseFloat(row[p]); if (!isNaN(v) && v > 0 && row[p] !== '' && row[p] !== '0') ovr[p] = v; });
+        if (Object.keys(ovr).length) OVERRIDES[code] = ovr;
       });
     }
 
-    // Standing
-    if(sResp&&sResp.ok){
-      parseCSV(await sResp.text()).forEach(row=>{
-        const code=(row['PCON24CD']||''  ).trim(); if(!code) return;
-        const std={}; MP.forEach(p=>{std[p]=row[p]!=='0';});
-        STANDING[code]=std;
+    if (sResp && sResp.ok) {
+      parseCSV(await sResp.text()).forEach(row => {
+        const code = (row['PCON24CD'] || '').trim(); if (!code) return;
+        const std = {}; MP.forEach(p => { std[p] = row[p] !== '0'; });
+        STANDING[code] = std;
       });
     }
 
-    // Polling
-    if(pollResp&&pollResp.ok){
-      POLL_MAP=buildPollMap(parseCSV(await pollResp.text()));
+    if (pollResp && pollResp.ok) {
+      POLL_MAP = buildPollMap(parseCSV(await pollResp.text()));
     }
 
-    // 2024 results
-    if(!rResp||!rResp.ok) throw new Error('results_2024.csv fetch failed');
-    parseCSV(await rResp.text()).forEach(row=>{
-      const code=(row['PCON24CD']||''  ).trim();
-      const region=(row['Region']||row['region']||''  ).trim();
-      if(!code||region==='Northern Ireland'||NI_CODES.has(code)) return;
-      const votes={};
-      MP.forEach(p=>{
-        votes[p]=p==='oth'
-          ?((parseFloat(row['oth_pct'])||0)+(parseFloat(row['rstr_pct'])||0)+(parseFloat(row['ind_pct'])||0))/100
-          :(parseFloat(row[p+'_pct'])||0)/100;
+    if (!rResp || !rResp.ok) throw new Error('results_2024.csv fetch failed');
+    parseCSV(await rResp.text()).forEach(row => {
+      const code   = (row['PCON24CD'] || '').trim();
+      const region = (row['Region'] || row['region'] || '').trim();
+      if (!code || region === 'Northern Ireland' || NI_CODES.has(code)) return;
+      const votes = {};
+      MP.forEach(p => {
+        votes[p] = p === 'oth'
+          ? ((parseFloat(row['oth_pct']) || 0) + (parseFloat(row['rstr_pct']) || 0) + (parseFloat(row['ind_pct']) || 0)) / 100
+          : (parseFloat(row[p + '_pct']) || 0) / 100;
       });
-      const defender=WM[(row['Winner']||''  ).trim()]||'oth';
-      DATA[code]={code,name:row['Constituency name'],region,defender,votes,winner:defender,margin:0,shares:{}};
+      const defender = WM[(row['Winner'] || '').trim()] || 'oth';
+      DATA[code] = { code, name: row['Constituency name'], region, defender, votes,
+                     winner: defender, margin: 0, shares: {} };
     });
 
-    // Run model with live polling — this populates shares for every seat
+    // Run model with live polling
     runModel();
 
-  }catch(e){
-    console.error('loadData failed:',e);
+  } catch(e) {
+    console.error('loadData failed:', e);
   }
 }
 
 // ============================================================
 // INCOMING POLL MAP FROM IFRAME2
 // ============================================================
-window.addEventListener('message',e=>{
-  if(!e.data) return;
+window.addEventListener('message', e => {
+  if (!e.data) return;
 
-  if(e.data.action==='forecastUpdate'&&e.data.pollMap){
-    // Custom poll from calculator — update and rerun
-    POLL_MAP=e.data.pollMap;
+  if (e.data.action === 'forecastUpdate' && e.data.pollMap) {
+    POLL_MAP = e.data.pollMap;
     runModel();
-    // Recolour map
-    if(window._map&&window._map.isStyleLoaded()){
-      const expr=buildColorMatch();
-      window._map.setPaintProperty('cons-fill','fill-color',expr);
-      window._map.setPaintProperty('cons-hover','fill-color',expr);
+    if (window._map && window._map.isStyleLoaded()) {
+      const expr = buildColorMatch();
+      window._map.setPaintProperty('cons-fill',  'fill-color', expr);
+      window._map.setPaintProperty('cons-hover', 'fill-color', expr);
     }
-    const badge=document.getElementById('live-badge');
-    if(badge) badge.style.display='';
+    const badge = document.getElementById('live-badge');
+    if (badge) badge.style.display = '';
   }
 
-  if(e.data.action==='scrollToMap'){
-    window.scrollTo({top:0,behavior:'smooth'});
+  if (e.data.action === 'scrollToMap') {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 });
 
