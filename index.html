@@ -29,5 +29,9 @@ window.addEventListener('message', function(e) {
     var forecastFrame = document.getElementById('forecast-iframe');
     if (forecastFrame) forecastFrame.contentWindow.postMessage(e.data, '*');
   }
+  if (e.data && e.data.action === 'seatCounts') {
+    var forecastFrame = document.getElementById('forecast-iframe');
+    if (forecastFrame) forecastFrame.contentWindow.postMessage(e.data, '*');
+  }
 });
 </script>
