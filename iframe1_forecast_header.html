@@ -2,34 +2,33 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Britain Predicts</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Arial',sans-serif; background:#fff; }
+body { font-family:Arial,sans-serif; background:#fff; }
 #loading { padding:24px; color:#999; font-size:13px; text-align:center; }
+#error   { padding:16px; color:#c00; font-size:12px; display:none; }
 #wrap    { display:none; }
 #header  { padding:10px 16px 8px; border-bottom:2px solid #111; }
 #brand   { font-size:14px; font-weight:700; color:#111; }
 #sub     { font-size:10px; color:#999; margin-top:2px; }
 #tiles   { display:flex; flex-wrap:wrap; gap:6px; padding:12px 16px 8px; }
-.tile    { flex:1; min-width:64px; max-width:110px; display:flex; flex-direction:column;
+.tile    { flex:1; min-width:60px; max-width:110px; display:flex; flex-direction:column;
            align-items:center; padding:8px 6px 6px; border-radius:5px; }
-.t-party  { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
-.t-seats  { font-size:26px; font-weight:700; line-height:1; }
-.t-change { font-size:10px; margin-top:3px; opacity:.85; }
-.t-bar    { width:100%; height:3px; border-radius:2px; margin-top:6px; opacity:.45; }
+.t-party { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+.t-seats { font-size:26px; font-weight:700; line-height:1; }
+.t-chg   { font-size:10px; margin-top:3px; opacity:.85; }
+.t-bar   { width:100%; height:3px; border-radius:2px; margin-top:6px; opacity:.45; }
 #btns    { display:flex; gap:8px; padding:8px 16px 12px; }
 .btn     { flex:1; padding:9px 12px; border:none; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer; }
-.btn-dark  { background:#111; color:#fff; }
-.btn-dark:hover  { background:#333; }
-.btn-light { background:#f0ede8; color:#111; }
-.btn-light:hover { background:#e5e0da; }
+.btn-d   { background:#111; color:#fff; } .btn-d:hover { background:#333; }
+.btn-l   { background:#f0ede8; color:#111; } .btn-l:hover { background:#e5e0da; }
 #status  { font-size:9px; color:#ccc; text-align:right; padding:0 16px 6px; }
 </style>
 </head>
 <body>
-<div id="loading">Waiting for forecast…</div>
+<div id="loading">Loading forecast…</div>
+<div id="error"></div>
 <div id="wrap">
   <div id="header">
     <div id="brand">Britain Predicts</div>
@@ -37,94 +36,71 @@ body { font-family:'Arial',sans-serif; background:#fff; }
   </div>
   <div id="tiles"></div>
   <div id="btns">
-    <button class="btn btn-dark"  onclick="window.parent.postMessage({action:'scrollToCalculator'},'*')">Create your own forecast</button>
-    <button class="btn btn-light" onclick="window.parent.postMessage({action:'scrollToMap'},'*')">Map</button>
+    <button class="btn btn-d" onclick="window.parent.postMessage({action:'scrollToCalculator'},'*')">Create your own forecast</button>
+    <button class="btn btn-l" onclick="window.parent.postMessage({action:'scrollToMap'},'*')">Map</button>
   </div>
   <div id="status"></div>
 </div>
-
 <script>
-// ── Config ────────────────────────────────────────────────────────────────────
-// iframe1 is now a pure display layer.
-// It shows seat counts received from iframe3 via the parent relay.
-// It fetches only the polling CSV to display the current poll figures.
-const POLL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=0&single=true&output=csv";
+// iframe1 is a DISPLAY ONLY layer.
+// It receives seat counts from iframe3 via the parent relay.
+// It fetches the polling CSV only to show the subtitle.
 
-const PARTIES    = ['con','lab','ldem','grn','snp','pc','ref','oth'];
-const TILE_ORDER = ['lab','ref','con','ldem','grn','snp','pc','oth'];
-const LABELS     = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Reform',oth:'Other'};
-const COLOURS    = {con:'#0087DC',lab:'#E4003B',ldem:'#FAA61A',grn:'#02A95B',snp:'#C8A400',pc:'#3F8428',ref:'#12B6CF',oth:'#57534e'};
-const SEATS_2024 = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
+const POLL_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=0&single=true&output=csv';
+const LABELS   = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Reform',oth:'Other'};
+const COLOURS  = {con:'#0087DC',lab:'#E4003B',ldem:'#FAA61A',grn:'#02A95B',snp:'#C8A400',pc:'#3F8428',ref:'#12B6CF',oth:'#57534e'};
+const S24      = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
 
-// ── CSV parsing (for poll subtitle only) ─────────────────────────────────────
-function parseCSV(text) {
-  const lines = text.trim().split('\n').filter(l => l.trim());
-  if (!lines.length) return [];
-  const sep = lines[0].includes('\t') ? '\t' : ',';
-  const headers = lines[0].split(sep).map(h => h.trim());
-  return lines.slice(1).map(line => {
-    const vals = line.split(sep).map(v => v.trim());
-    const obj = {};
-    headers.forEach((h, i) => obj[h] = vals[i] !== undefined ? vals[i] : '');
-    return obj;
-  });
-}
-
-// ── Render tiles from seat counts ─────────────────────────────────────────────
 function renderTiles(counts) {
-  const sorted = [...TILE_ORDER].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
-  const tilesEl = document.getElementById('tiles');
-  tilesEl.innerHTML = '';
-  for (const p of sorted) {
-    const count = counts[p] || 0;
-    const prev  = SEATS_2024[p] || 0;
-    const diff  = count - prev;
-    const tile  = document.createElement('div');
-    tile.className = 'tile';
-    tile.style.background = COLOURS[p] + '18';
-    tile.innerHTML = `
-      <div class="t-party"  style="color:${COLOURS[p]}">${LABELS[p]}</div>
-      <div class="t-seats"  style="color:${COLOURS[p]}">${count}</div>
-      <div class="t-change" style="color:${COLOURS[p]}">${diff >= 0 ? '+' : ''}${diff}</div>
-      <div class="t-bar"    style="background:${COLOURS[p]}"></div>`;
-    tilesEl.appendChild(tile);
+  const order = Object.keys(counts).sort((a,b) => (counts[b]||0)-(counts[a]||0));
+  const el = document.getElementById('tiles');
+  el.innerHTML = '';
+  for (const p of order) {
+    const n = counts[p]||0, prev = S24[p]||0, d = n-prev;
+    const t = document.createElement('div');
+    t.className = 'tile';
+    t.style.background = (COLOURS[p]||'#999')+'18';
+    t.innerHTML = `<div class="t-party" style="color:${COLOURS[p]||'#999'}">${LABELS[p]||p}</div>
+      <div class="t-seats" style="color:${COLOURS[p]||'#999'}">${n}</div>
+      <div class="t-chg"   style="color:${COLOURS[p]||'#999'}">${d>=0?'+':''}${d}</div>
+      <div class="t-bar"   style="background:${COLOURS[p]||'#999'}"></div>`;
+    el.appendChild(t);
   }
   document.getElementById('loading').style.display = 'none';
   document.getElementById('wrap').style.display = 'block';
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+  document.getElementById('status').textContent = total + ' seats projected';
 }
 
-// ── Listen for seat counts from iframe3 (relayed by parent) ──────────────────
+// Receive seat counts from iframe3 via parent relay
 window.addEventListener('message', e => {
-  if (!e.data) return;
-  if (e.data.action === 'seatCounts' && e.data.counts) {
+  if (e.data && e.data.action === 'seatCounts' && e.data.counts) {
     renderTiles(e.data.counts);
-    const total = Object.values(e.data.counts).reduce((a, b) => a + b, 0);
-    document.getElementById('status').textContent =
-      `${total} seats · from map model`;
   }
 });
 
-// ── Fetch poll figures for subtitle (non-blocking) ───────────────────────────
-async function loadPollSubtitle() {
+// Poll subtitle — fetch independently, non-blocking
+(async () => {
   try {
     const r = await fetch(POLL_CSV + '&_=' + Date.now());
     if (!r.ok) return;
-    const rows = parseCSV(await r.text());
-    const gbRow = rows.find(row =>
-      (row['region'] || row['Region'] || Object.values(row)[0] || '').trim().toLowerCase() === 'gb-wide'
-    );
+    const text = await r.text();
+    const lines = text.trim().split('\n').filter(l=>l.trim());
+    const sep = lines[0].includes('\t') ? '\t' : ',';
+    const headers = lines[0].split(sep).map(h=>h.trim());
+    const gbRow = lines.slice(1).map(line => {
+      const vals = line.split(sep).map(v=>v.trim());
+      const o = {}; headers.forEach((h,i) => o[h] = vals[i]||'');
+      return o;
+    }).find(r => (r['region']||r['Region']||Object.values(r)[0]||'').trim().toLowerCase()==='gb-wide');
     if (!gbRow) return;
     const parts = ['ref','lab','con','ldem'].map(p => {
-      const v = parseFloat(gbRow[p + '_pct'] || gbRow[p] || 0) || 0;
+      const v = parseFloat(gbRow[p+'_pct']||gbRow[p]||0)||0;
       return `${LABELS[p]} ${v.toFixed(1)}%`;
     }).join(' · ');
     document.getElementById('sub').textContent = parts;
-  } catch(e) {
-    // subtitle is non-critical — fail silently
-  }
-}
-
-loadPollSubtitle();
+  } catch(e) {}
+})();
 </script>
 </body>
 </html>
