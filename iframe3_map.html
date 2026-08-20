@@ -363,6 +363,13 @@ function applyModelToAll(pollMap) {
     seat.margin    = result.margin;
     seat.shares    = result.shares;
   });
+
+  // Count seats per winner and broadcast to parent (for iframe1 headline)
+  const counts = {};
+  Object.values(DATA).forEach(seat => {
+    counts[seat.winner] = (counts[seat.winner] || 0) + 1;
+  });
+  window.parent.postMessage({ action: 'seatCounts', counts }, '*');
 }
 
 async function loadData(){
