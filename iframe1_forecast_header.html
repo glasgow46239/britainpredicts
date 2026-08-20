@@ -69,6 +69,19 @@ const BASELINE_2024 = {
   'London':          {con:20.6,lab:43.0,ldem:11.0,grn:10.0,snp:0,   pc:0,   ref:8.7, oth:6.7},
 };
 
+async function fetchWithRetry(url, retries=3) {
+  for (let i=0; i<retries; i++) {
+    try {
+      const r = await fetch(url + (url.includes('?')?'&':'?') + '_=' + Date.now());
+      if (r.ok) return r;
+      if (i === retries-1) throw new Error('HTTP ' + r.status);
+    } catch(e) {
+      if (i === retries-1) throw e;
+      await new Promise(r => setTimeout(r, 600 * (i+1)));
+    }
+  }
+}
+
 function parseCSV(text) {
   const lines = text.trim().split('\n').filter(l => l.trim());
   if (!lines.length) return [];
@@ -82,8 +95,8 @@ function parseCSV(text) {
   });
 }
 async function fetchCSV(url) {
-  const r = await fetch(url + (url.includes('?') ? '&' : '?') + '_=' + Date.now());
-  if (!r.ok) throw new Error('Fetch failed ' + r.status);
+  const r = await fetchWithRetry(url);
+  if (!r || !r.ok) throw new Error('Fetch failed ' + (r?.status||'network error'));
   return parseCSV(await r.text());
 }
 
