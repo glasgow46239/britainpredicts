@@ -79,6 +79,13 @@ window.addEventListener('message', e => {
   }
 });
 
+// Fallback: if no seatCounts received after 12s, show a helpful message
+setTimeout(() => {
+  if (document.getElementById('wrap').style.display === 'none') {
+    document.getElementById('loading').textContent = 'Waiting for map to load…';
+  }
+}, 12000);
+
 // Poll subtitle — fetch independently, non-blocking
 (async () => {
   try {
