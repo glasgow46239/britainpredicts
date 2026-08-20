@@ -247,7 +247,9 @@ function buildUserPollMap() {
 function run() {
   const pollMap=buildUserPollMap();
   const tacticalEnabled=document.getElementById('tactical-toggle')?.checked ?? true;
-  const tacticalIntensity=parseFloat(document.getElementById('tactical-intensity')?.value||1)||1;
+  const intensityRaw=document.getElementById('tactical-intensity')?.value;
+  const intensityParsed=parseFloat(intensityRaw);
+  const tacticalIntensity=(intensityRaw!=null && !isNaN(intensityParsed)) ? intensityParsed : 1;
   // Send to iframe3 via parent — iframe3 runs model and broadcasts results
   window.parent.postMessage({action:'forecastUpdate', pollMap, tacticalEnabled, tacticalIntensity}, '*');
   document.getElementById('results').style.display='block';
