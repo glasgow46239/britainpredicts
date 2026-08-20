@@ -135,6 +135,11 @@ body{font-family:'Roboto',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0
     </div>
   </div>
   <span id="live-badge">&#9679; Live</span>
+  <button id="dl-btn" onclick="downloadCSV()" title="Download model output as CSV"
+    style="margin-left:8px;padding:4px 10px;background:#111;color:#fff;border:none;
+           border-radius:3px;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:.02em">
+    ↓ CSV
+  </button>
 </div>
 
 <div id="map-container">
@@ -247,6 +252,19 @@ let POLL_MAP = {};
 
 // ── CSV parser ────────────────────────────────────────────────────────────────
 function parseCSVLine(line){const f=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const ch=line[i];if(inQ){if(ch==='"'&&line[i+1]==='"'){cur+='"';i++;}else if(ch==='"'){inQ=false;}else{cur+=ch;}}else{if(ch==='"'){inQ=true;}else if(ch===','){f.push(cur.trim());cur='';}else{cur+=ch;}}}f.push(cur.trim());return f;}
+async function fetchWithRetry(url, retries=3) {
+  for (let i=0; i<retries; i++) {
+    try {
+      const r = await fetch(url + (url.includes('?')?'&':'?') + '_=' + Date.now());
+      if (r.ok) return r;
+      if (i === retries-1) throw new Error('HTTP ' + r.status);
+    } catch(e) {
+      if (i === retries-1) throw e;
+      await new Promise(r => setTimeout(r, 600 * (i+1)));
+    }
+  }
+}
+
 function parseCSV(text){
   const lines=text.trim().split('\n').filter(l=>l.trim());
   // Auto-detect separator
@@ -347,16 +365,17 @@ function applyModelToAll(pollMap) {
 
 async function loadData(){
   try{
-    const [rResp, pResp, pollResp, oResp, sResp] = await Promise.all([
-      fetch(RESULTS_URL),
-      fetch(PARAMS_URL   + '&_=' + Date.now()),
-      fetch(POLL_CSV     + '&_=' + Date.now()),
-      fetch(OVERRIDE_URL + '&_=' + Date.now()),
-      fetch(STANDING_URL + '&_=' + Date.now()),
+    // Load structural data only — polling comes via postMessage from iframe1
+    // This guarantees the map and headline always use identical poll data
+    const [rResp, pResp, oResp, sResp] = await Promise.all([
+      fetchWithRetry(RESULTS_URL),
+      fetchWithRetry(PARAMS_URL   + '&_=' + Date.now()),
+      fetchWithRetry(OVERRIDE_URL + '&_=' + Date.now()),
+      fetchWithRetry(STANDING_URL + '&_=' + Date.now()),
     ]);
 
     // Params
-    if(pResp.ok){
+    if(pResp && pResp.ok){
       parseCSV(await pResp.text()).forEach(row => {
         const code = (row['PCON24CD']||'').trim();
         if(code) PARAMS[code] = row;
@@ -364,7 +383,7 @@ async function loadData(){
     }
 
     // Overrides
-    if(oResp.ok){
+    if(oResp && oResp.ok){
       parseCSV(await oResp.text()).forEach(row => {
         const code = (row['PCON24CD']||'').trim(); if(!code) return;
         const ovr = {};
@@ -376,7 +395,7 @@ async function loadData(){
     }
 
     // Standing
-    if(sResp.ok){
+    if(sResp && sResp.ok){
       parseCSV(await sResp.text()).forEach(row => {
         const code = (row['PCON24CD']||'').trim(); if(!code) return;
         const std = {};
@@ -385,12 +404,8 @@ async function loadData(){
       });
     }
 
-    // Load polling
-    if(pollResp.ok){
-      POLL_MAP = buildPollMap(parseCSV(await pollResp.text()));
-    }
-
-    if(!rResp.ok) throw new Error('results fetch failed');
+    // Load 2024 results into DATA — but don't run model yet (no poll data)
+    if(!rResp || !rResp.ok) throw new Error('results fetch failed');
     parseCSV(await rResp.text()).forEach(row=>{
       const code   = row['PCON24CD'];
       const region = (row['Region']||row['region']||'').trim();
@@ -398,9 +413,8 @@ async function loadData(){
       const votes={};
       MP.forEach(p=>{votes[p]=p==='oth'?((parseFloat(row['oth_pct'])||0)+(parseFloat(row['rstr_pct'])||0)+(parseFloat(row['ind_pct'])||0))/100:(parseFloat(row[p+'_pct'])||0)/100;});
       const defender = WM[(row['Winner']||'').trim()]||'oth';
-      const result   = optionC({code,region,votes}, POLL_MAP);
       DATA[code] = { code, name:row['Constituency name'], region, defender, votes,
-                     winner:result.winner, margin:result.margin, shares:result.shares };
+                     winner:defender, margin:0, shares:{} };
     });
   }catch(e){console.warn('Data load failed:',e);}
 }
@@ -710,24 +724,28 @@ function initSearch(geojsonData,map,isWideFn){
 // FORECAST UPDATE (from iframe2 via parent relay)
 // ============================================================
 window.addEventListener('message', e => {
-  if (!e.data || e.data.action !== 'forecastUpdate') return;
-  const pollMap = e.data.pollMap;
-  if (!pollMap) return;
+  if (!e.data) return;
 
-  // Update stored poll map
-  Object.assign(POLL_MAP, pollMap);
+  if (e.data.action === 'forecastUpdate') {
+    const pollMap = e.data.pollMap;
+    if (!pollMap) return;
 
-  // Rerun model for every seat
-  applyModelToAll(POLL_MAP);
+    // Use pollMap from iframe1 — guarantees map and headline are identical
+    POLL_MAP = pollMap;
+    applyModelToAll(POLL_MAP);
 
-  // Recolour the map
-  if (window._map && window._map.isStyleLoaded()) {
-    const expr = buildColorMatch();
-    window._map.setPaintProperty('cons-fill',  'fill-color', expr);
-    window._map.setPaintProperty('cons-hover', 'fill-color', expr);
+    if (window._map && window._map.isStyleLoaded()) {
+      const expr = buildColorMatch();
+      window._map.setPaintProperty('cons-fill',  'fill-color', expr);
+      window._map.setPaintProperty('cons-hover', 'fill-color', expr);
+    }
+    const badge = document.getElementById('live-badge');
+    if (badge) badge.style.display = '';
   }
-  const badge = document.getElementById('live-badge');
-  if (badge) badge.style.display = '';
+
+  if (e.data.action === 'scrollToMap') {
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
 });
 
 // ============================================================
@@ -756,6 +774,42 @@ async function bootstrap(){
 }
 
 bootstrap();
+
+// ── CSV download ──────────────────────────────────────────────────────────────
+function downloadCSV() {
+  const parties = ['con','lab','ldem','grn','snp','pc','ref','oth'];
+  const pLabels = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Reform',oth:'Other'};
+  const header  = ['PCON24CD','Constituency','Region','Projected Winner',
+    ...parties.map(p => pLabels[p] + ' %'),
+    ...parties.map(p => pLabels[p] + ' 2024 %')].join(',');
+
+  const rows = Object.values(DATA)
+    .sort((a,b) => a.name.localeCompare(b.name))
+    .map(d => {
+      const winner = (d.winner||'oth').toUpperCase();
+      const shares = parties.map(p => ((d.shares[p]||0)*100).toFixed(1));
+      const votes  = parties.map(p => ((d.votes[p]||0)*100).toFixed(1));
+      return [
+        d.code,
+        '"' + (d.name||'').replace(/"/g,'""') + '"',
+        '"' + (d.region||'') + '"',
+        winner,
+        ...shares,
+        ...votes,
+      ].join(',');
+    });
+
+  if (!rows.length) { alert('No data loaded yet — please wait for the map to load.'); return; }
+
+  const csv  = [header, ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'britain_predicts_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
 </script>
 </body>
 </html>
