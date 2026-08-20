@@ -67,6 +67,16 @@ body { font-family:Arial,sans-serif; background:#fff; font-size:13px; }
   </div>
   <div id="panel-gb"  class="panel active"><div id="gb-grid"  class="grid4"></div><div id="gb-ctrl" class="ctrl"></div></div>
   <div id="panel-reg" class="panel"><div id="reg-panels"></div></div>
+  <div id="tactical-wrap" style="padding:0 16px 8px;display:flex;align-items:center;gap:10px;font-size:11px;color:#555;flex-wrap:wrap;">
+    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
+      <input type="checkbox" id="tactical-toggle" checked style="cursor:pointer;">
+      Tactical voting
+    </label>
+    <span style="flex:1;min-width:8px"></span>
+    <span class="tlbl">Intensity</span>
+    <input type="range" id="tactical-intensity" min="0" max="2" step="0.1" value="1" style="width:100px;vertical-align:middle;">
+    <span class="tval" id="tactical-intensity-val">1.0×</span>
+  </div>
   <div id="run-wrap"><button id="run-btn" onclick="run()">Run forecast ›</button></div>
   <div id="results"><div id="rlbl">Projected seats</div><div id="rgrid"></div></div>
   <div id="status"></div>
@@ -236,11 +246,18 @@ function buildUserPollMap() {
 
 function run() {
   const pollMap=buildUserPollMap();
+  const tacticalEnabled=document.getElementById('tactical-toggle')?.checked ?? true;
+  const tacticalIntensity=parseFloat(document.getElementById('tactical-intensity')?.value||1)||1;
   // Send to iframe3 via parent — iframe3 runs model and broadcasts results
-  window.parent.postMessage({action:'forecastUpdate', pollMap}, '*');
+  window.parent.postMessage({action:'forecastUpdate', pollMap, tacticalEnabled, tacticalIntensity}, '*');
   document.getElementById('results').style.display='block';
   document.getElementById('rgrid').innerHTML='<div style="padding:8px;color:#999;font-size:11px">Updating map…</div>';
 }
+
+document.getElementById('tactical-intensity')?.addEventListener('input', e => {
+  const v=parseFloat(e.target.value);
+  document.getElementById('tactical-intensity-val').textContent=v.toFixed(1)+'×';
+});
 
 // Receive seat counts back from iframe3 (via parent relay) to show in calculator results
 window.addEventListener('message', e => {
