@@ -409,7 +409,7 @@ async function loadData(){
     // Load 2024 results into DATA — but don't run model yet (no poll data)
     if(!rResp || !rResp.ok) throw new Error('results fetch failed');
     parseCSV(await rResp.text()).forEach(row=>{
-      const code   = row['PCON24CD'];
+      const code   = (row['PCON24CD']||'').trim();
       const region = (row['Region']||row['region']||'').trim();
       if(!code||region==='Northern Ireland') return;
       const votes={};
