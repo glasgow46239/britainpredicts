@@ -369,7 +369,7 @@ async function loadData(){
         const code = (row['PCON24CD']||'').trim(); if(!code) return;
         const ovr = {};
         ['con','lab','ldem','grn','snp','pc','ref','oth'].forEach(p => {
-          const v = parseFloat(row[p]); if(!isNaN(v) && row[p]!=='') ovr[p]=v;
+          const v = parseFloat(row[p]); if(!isNaN(v) && v > 0 && row[p]!=='' && row[p]!=='0') ovr[p]=v;
         });
         if(Object.keys(ovr).length) OVERRIDES[code] = ovr;
       });
