@@ -367,47 +367,11 @@ function applyModelToAll(pollMap) {
 
 async function loadData(){
   try{
-    // Load structural data only — polling comes via postMessage from iframe1
-    // This guarantees the map and headline always use identical poll data
-    const [rResp, pResp, oResp, sResp] = await Promise.all([
-      fetchWithRetry(RESULTS_URL),
-      fetchWithRetry(PARAMS_URL   + '&_=' + Date.now()),
-      fetchWithRetry(OVERRIDE_URL + '&_=' + Date.now()),
-      fetchWithRetry(STANDING_URL + '&_=' + Date.now()),
-    ]);
-
-    // Params
-    if(pResp && pResp.ok){
-      parseCSV(await pResp.text()).forEach(row => {
-        const code = (row['PCON24CD']||'').trim();
-        if(code) PARAMS[code] = row;
-      });
-    }
-
-    // Overrides
-    if(oResp && oResp.ok){
-      parseCSV(await oResp.text()).forEach(row => {
-        const code = (row['PCON24CD']||'').trim(); if(!code) return;
-        const ovr = {};
-        ['con','lab','ldem','grn','snp','pc','ref','oth'].forEach(p => {
-          const v = parseFloat(row[p]); if(!isNaN(v) && v > 0 && row[p]!=='' && row[p]!=='0') ovr[p]=v;
-        });
-        if(Object.keys(ovr).length) OVERRIDES[code] = ovr;
-      });
-    }
-
-    // Standing
-    if(sResp && sResp.ok){
-      parseCSV(await sResp.text()).forEach(row => {
-        const code = (row['PCON24CD']||'').trim(); if(!code) return;
-        const std = {};
-        ['con','lab','ldem','grn','snp','pc','ref','oth'].forEach(p => { std[p] = row[p]!=='0'; });
-        STANDING[code] = std;
-      });
-    }
-
-    // Load 2024 results into DATA — but don't run model yet (no poll data)
-    if(!rResp || !rResp.ok) throw new Error('results fetch failed');
+    // iframe3 only fetches the 2024 results (structural vote data).
+    // params, overrides, standing and pollMap all come from iframe1 via postMessage.
+    // This guarantees the map and headline use identical inputs.
+    const rResp = await fetchWithRetry(RESULTS_URL);
+    if (!rResp || !rResp.ok) throw new Error('results fetch failed');
     parseCSV(await rResp.text()).forEach(row=>{
       const code   = (row['PCON24CD']||'').trim();
       const region = (row['Region']||row['region']||'').trim();
@@ -746,17 +710,20 @@ window.addEventListener('message', e => {
   if (!e.data) return;
 
   if (e.data.action === 'forecastUpdate') {
-    const pollMap = e.data.pollMap;
+    const pollMap  = e.data.pollMap;
     if (!pollMap) return;
 
+    // Use everything from iframe1 — guaranteed identical inputs
+    POLL_MAP  = pollMap;
+    if (e.data.params)    PARAMS    = e.data.params;
+    if (e.data.overrides) OVERRIDES = e.data.overrides;
+    if (e.data.standing)  STANDING  = e.data.standing;
+
     if (!dataReady) {
-      // Structural data not loaded yet — queue it and apply once ready
       pendingPollMap = pollMap;
       return;
     }
 
-    // Data ready — apply immediately
-    POLL_MAP = pollMap;
     applyModelToAll(POLL_MAP);
 
     if (window._map && window._map.isStyleLoaded()) {
