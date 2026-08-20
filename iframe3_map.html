@@ -248,6 +248,40 @@ const BASELINE_2024 = {
 };
 
 // ============================================================
+// TACTICAL VOTING CONFIG
+// ============================================================
+// Two optional sheet tabs, same spreadsheet as everything else. Both are
+// optional — leave the URLs null and the model runs on the defaults below.
+//   "Tactical Affinity"  — columns: from,con,lab,ldem,grn,snp,pc,ref,oth
+//                           value = % of "from" party's vote willing to be
+//                           lent to the column party at max closeness/intensity.
+//   "Tactical Intensity" — columns: PCON24CD,intensity
+//                           per-seat multiplier on the squeeze strength,
+//                           default 1 if the seat has no row. Use this for
+//                           seats with an unusually hot local campaign.
+const AFFINITY_URL  = null; // set to BASE + '<gid>&single=true&output=csv' once published
+const INTENSITY_URL = null; // set to BASE + '<gid>&single=true&output=csv' once published
+
+// Seed affinity matrix (fractions 0-1) — used until AFFINITY_URL is set,
+// and as the fallback for any "from" party missing from the sheet.
+const DEFAULT_AFFINITY = {
+  con:  { ref:0.55, ldem:0.05 },
+  ref:  { con:0.55 },
+  lab:  { ldem:0.35, grn:0.20 },
+  ldem: { lab:0.45, grn:0.15, con:0.05 },
+  grn:  { lab:0.60, ldem:0.25 },
+  snp:  { lab:0.20 },
+  pc:   { lab:0.20 },
+  oth:  {},
+};
+
+// Squeeze shape — how fast the pull fades with distance from 1st, and the
+// hard ceiling on how much of any one party's vote can be tactically lent
+// away. Per-seat/global "intensity" (below) scales on top of these.
+const CLOSENESS_SCALE      = 0.30; // squeeze fades to 0 once the leader is >30pts clear of the challenger
+const MAX_SQUEEZE_FRACTION = 0.65; // no donor party ever loses more than 65% of its vote tactically
+
+// ============================================================
 // STATE
 // ============================================================
 let PARAMS    = {};
@@ -255,6 +289,10 @@ let OVERRIDES = {};
 let STANDING  = {};
 let POLL_MAP  = {};
 let DATA      = {};
+let AFFINITY       = DEFAULT_AFFINITY;
+let SEAT_INTENSITY = {};   // PCON24CD -> multiplier, from Tactical Intensity tab
+let TACTICAL_ENABLED = true;
+let GLOBAL_INTENSITY = 1;  // scenario slider from iframe2, default 1x
 
 // ============================================================
 // CSV PARSER
@@ -364,19 +402,79 @@ function optionC(seat) {
   // Apply overrides
   const pinned = Object.keys(ovr);
   if (pinned.length > 0) {
+    // A seat with hand-pinned overrides is one Bobby has explicitly set —
+    // skip tactical voting here so the pin stays exactly what was entered.
     const pinnedTotal  = pinned.reduce((s, p) => s + ovr[p], 0);
     const free         = MP.filter(p => !pinned.includes(p));
     const freeTotal    = free.reduce((s, p) => s + (raw[p] || 0), 0);
     const scale        = freeTotal > 0 ? Math.max(0, 100 - pinnedTotal) / freeTotal : 0;
     pinned.forEach(p => raw[p] = ovr[p] / 100);
     free.forEach(p   => raw[p] = (raw[p] || 0) * scale / 100);
-  } else {
-    const tot = MP.reduce((s, p) => s + (raw[p] || 0), 0);
-    if (tot > 0) MP.forEach(p => raw[p] = (raw[p] || 0) / tot);
+
+    const sorted = MP.slice().sort((a, b) => (raw[b] || 0) - (raw[a] || 0));
+    return { winner: sorted[0], margin: ((raw[sorted[0]] || 0) - (raw[sorted[1]] || 0)) * 100, shares: raw };
   }
 
-  const sorted = MP.slice().sort((a, b) => (raw[b] || 0) - (raw[a] || 0));
-  return { winner: sorted[0], margin: ((raw[sorted[0]] || 0) - (raw[sorted[1]] || 0)) * 100, shares: raw };
+  const tot = MP.reduce((s, p) => s + (raw[p] || 0), 0);
+  if (tot > 0) MP.forEach(p => raw[p] = (raw[p] || 0) / tot);
+
+  // Tactical voting — second pass on top of Option C's own swung shares
+  const tactical = applyTacticalVoting(seat, raw);
+
+  const sorted = MP.slice().sort((a, b) => (tactical[b] || 0) - (tactical[a] || 0));
+  return { winner: sorted[0], margin: ((tactical[sorted[0]] || 0) - (tactical[sorted[1]] || 0)) * 100, shares: tactical };
+}
+
+// ============================================================
+// TACTICAL VOTING
+// ============================================================
+// In each un-pinned seat: find the trailing party that other trailing
+// parties' voters would most readily lend votes to ("least disliked" —
+// own share plus affinity-weighted borrowed support), then pull votes
+// toward that challenger from the other trailing parties, scaled by how
+// close the race is and by intensity (seat override x global scenario
+// slider). Parties with zero affinity toward the challenger never move.
+function applyTacticalVoting(seat, shares) {
+  if (!TACTICAL_ENABLED) return shares;
+
+  const sorted = MP.slice().sort((a, b) => (shares[b] || 0) - (shares[a] || 0));
+  const leader = sorted[0];
+  const trailing = sorted.slice(1).filter(p => (shares[p] || 0) > 0.001);
+  if (trailing.length < 2) return shares; // nothing to squeeze between
+
+  const strengths = {};
+  trailing.forEach(to => {
+    let s = shares[to] || 0;
+    trailing.forEach(from => {
+      if (from === to) return;
+      const aff = (AFFINITY[from] && AFFINITY[from][to]) || 0;
+      s += (shares[from] || 0) * aff * 0.5; // ranking weight only — not the actual transfer
+    });
+    strengths[to] = s;
+  });
+  const challenger = trailing.slice().sort((a, b) => strengths[b] - strengths[a])[0];
+
+  const margin = (shares[leader] || 0) - (shares[challenger] || 0);
+  const closeness = Math.max(0, 1 - margin / CLOSENESS_SCALE);
+  if (closeness <= 0) return shares;
+
+  const seatIntensity = SEAT_INTENSITY[seat.code] != null ? SEAT_INTENSITY[seat.code] : 1;
+  const intensity = seatIntensity * GLOBAL_INTENSITY;
+  if (intensity <= 0) return shares;
+
+  const adjusted = Object.assign({}, shares);
+  trailing.forEach(from => {
+    if (from === challenger) return;
+    const aff = (AFFINITY[from] && AFFINITY[from][challenger]) || 0;
+    if (aff <= 0) return;
+    const pull = Math.min(
+      (shares[from] || 0) * MAX_SQUEEZE_FRACTION,
+      (shares[from] || 0) * aff * closeness * intensity
+    );
+    adjusted[from] = Math.max(0, (adjusted[from] || 0) - pull);
+    adjusted[challenger] = (adjusted[challenger] || 0) + pull;
+  });
+  return adjusted;
 }
 
 // ============================================================
@@ -441,6 +539,42 @@ async function loadData() {
       POLL_MAP = buildPollMap(parseCSV(await pollResp.text()));
     }
 
+    // Optional: Tactical Affinity + Tactical Intensity tabs. Missing/unset
+    // is fine — falls back to DEFAULT_AFFINITY and no seat overrides.
+    if (AFFINITY_URL) {
+      try {
+        const aResp = await fetchWithRetry(AFFINITY_URL + '&_=' + Date.now());
+        if (aResp && aResp.ok) {
+          const parsed = {};
+          parseCSV(await aResp.text()).forEach(row => {
+            const from = (row['from'] || row['party'] || Object.values(row)[0] || '').trim().toLowerCase();
+            if (!from) return;
+            parsed[from] = {};
+            MP.forEach(to => {
+              const v = parseFloat(row[to]);
+              if (!isNaN(v) && v > 0) parsed[from][to] = v / 100;
+            });
+          });
+          if (Object.keys(parsed).length) AFFINITY = parsed;
+        }
+      } catch (e) { console.warn('Tactical affinity fetch failed, using defaults:', e); }
+    }
+
+    if (INTENSITY_URL) {
+      try {
+        const iResp = await fetchWithRetry(INTENSITY_URL + '&_=' + Date.now());
+        if (iResp && iResp.ok) {
+          const parsed = {};
+          parseCSV(await iResp.text()).forEach(row => {
+            const code = (row['PCON24CD'] || '').trim(); if (!code) return;
+            const v = parseFloat(row['intensity']);
+            if (!isNaN(v)) parsed[code] = v;
+          });
+          SEAT_INTENSITY = parsed;
+        }
+      } catch (e) { console.warn('Tactical intensity fetch failed, using defaults:', e); }
+    }
+
     if (!rResp || !rResp.ok) throw new Error('results_2024.csv fetch failed');
     parseCSV(await rResp.text()).forEach(row => {
       const code   = (row['PCON24CD'] || '').trim();
@@ -473,6 +607,8 @@ window.addEventListener('message', e => {
 
   if (e.data.action === 'forecastUpdate' && e.data.pollMap) {
     POLL_MAP = e.data.pollMap;
+    if (typeof e.data.tacticalEnabled === 'boolean') TACTICAL_ENABLED = e.data.tacticalEnabled;
+    if (typeof e.data.tacticalIntensity === 'number' && !isNaN(e.data.tacticalIntensity)) GLOBAL_INTENSITY = e.data.tacticalIntensity;
     runModel();
     if (window._map && window._map.isStyleLoaded()) {
       const expr = buildColorMatch();
@@ -785,46 +921,6 @@ function initSearch(geojsonData,map,isWideFn){
   document.addEventListener('click',e=>{if(!document.getElementById('search-wrap').contains(e.target))closeResults();});
   input.addEventListener('keydown',e=>{if(e.key==='Escape'){closeResults();input.blur();}if(e.key==='Enter'){const first=results.querySelector('.search-result-item');if(first)first.click();}});
 }
-
-// ============================================================
-// FORECAST UPDATE (from iframe 2 via parent relay)
-// ============================================================
-// ============================================================
-// FORECAST UPDATE (from iframe2 via parent relay)
-// ============================================================
-window.addEventListener('message', e => {
-  if (!e.data) return;
-
-  if (e.data.action === 'forecastUpdate') {
-    const pollMap  = e.data.pollMap;
-    if (!pollMap) return;
-
-    // Use everything from iframe1 — guaranteed identical inputs
-    POLL_MAP  = pollMap;
-    if (e.data.params)    PARAMS    = e.data.params;
-    if (e.data.overrides) OVERRIDES = e.data.overrides;
-    if (e.data.standing)  STANDING  = e.data.standing;
-
-    if (!dataReady) {
-      pendingPollMap = pollMap;
-      return;
-    }
-
-    applyModelToAll(POLL_MAP);
-
-    if (window._map && window._map.isStyleLoaded()) {
-      const expr = buildColorMatch();
-      window._map.setPaintProperty('cons-fill',  'fill-color', expr);
-      window._map.setPaintProperty('cons-hover', 'fill-color', expr);
-    }
-    const badge = document.getElementById('live-badge');
-    if (badge) badge.style.display = '';
-  }
-
-  if (e.data.action === 'scrollToMap') {
-    window.scrollTo({top:0, behavior:'smooth'});
-  }
-});
 
 // ============================================================
 // BOOTSTRAP
