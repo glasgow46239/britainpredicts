@@ -249,6 +249,8 @@ const BASELINE_2024 = {
 
 // Current poll map — keyed by region name, populated on load and updated by iframe2
 let POLL_MAP = {};
+let dataReady = false;       // true once loadData() has completed
+let pendingPollMap = null;   // stores pollMap received before data was ready
 
 // ── CSV parser ────────────────────────────────────────────────────────────────
 function parseCSVLine(line){const f=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const ch=line[i];if(inQ){if(ch==='"'&&line[i+1]==='"'){cur+='"';i++;}else if(ch==='"'){inQ=false;}else{cur+=ch;}}else{if(ch==='"'){inQ=true;}else if(ch===','){f.push(cur.trim());cur='';}else{cur+=ch;}}}f.push(cur.trim());return f;}
@@ -416,6 +418,23 @@ async function loadData(){
       DATA[code] = { code, name:row['Constituency name'], region, defender, votes,
                      winner:defender, margin:0, shares:{} };
     });
+      // Data is ready — request a rebroadcast from iframe1 in case we finished after it
+    window.parent.postMessage({ action: 'requestForecast' }, '*');
+
+    // Apply any pollMap that arrived before we finished loading
+    dataReady = true;
+    if (pendingPollMap) {
+      POLL_MAP = pendingPollMap;
+      pendingPollMap = null;
+      applyModelToAll(POLL_MAP);
+      if (window._map && window._map.isStyleLoaded()) {
+        const expr = buildColorMatch();
+        window._map.setPaintProperty('cons-fill',  'fill-color', expr);
+        window._map.setPaintProperty('cons-hover', 'fill-color', expr);
+      }
+      const badge = document.getElementById('live-badge');
+      if (badge) badge.style.display = '';
+    }
   }catch(e){console.warn('Data load failed:',e);}
 }
 
@@ -730,7 +749,13 @@ window.addEventListener('message', e => {
     const pollMap = e.data.pollMap;
     if (!pollMap) return;
 
-    // Use pollMap from iframe1 — guarantees map and headline are identical
+    if (!dataReady) {
+      // Structural data not loaded yet — queue it and apply once ready
+      pendingPollMap = pollMap;
+      return;
+    }
+
+    // Data ready — apply immediately
     POLL_MAP = pollMap;
     applyModelToAll(POLL_MAP);
 
