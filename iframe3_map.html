@@ -407,12 +407,24 @@ function optionC(seat) {
     const isStanding = std ? std[party] : (base[party] > 0);
     if (!isStanding) { raw[party] = 0; return; }
 
-    let local = base[party] || 0;
-    if (local === 0) local = (FRESH[party] || 3) / 100; // standing but didn't contest 2024
+    const override = ovr[party];
+    let local, refLevel;
+    if (override) {
+      // A by-election/local-election override: local baseline is the
+      // recorded result, and — when a reference poll was recorded — swing
+      // is measured from that snapshot instead of the 2024 baseline, so
+      // the seat rides current polling instead of freezing at the result.
+      // No reference poll recorded -> old behaviour, a flat pin (swing 0).
+      local    = override.result / 100;
+      refLevel = override.refPoll != null ? override.refPoll / 100 : (regPoll[party] || 0) / 100;
+    } else {
+      local    = base[party] || 0;
+      if (local === 0) local = (FRESH[party] || 3) / 100; // standing but didn't contest 2024
+      refLevel = (regBase[party] || 0) / 100;
+    }
 
     const poll  = (regPoll[party] || 0) / 100;
-    const base2 = (regBase[party] || 0) / 100;
-    const swing = poll - base2;
+    const swing = poll - refLevel;
     const hd    = Math.max(0, 1 - local);
     const mult  = Math.min(1.7, Math.max(0.25, parseFloat(p[party + '_multiplier'] || 1) || 1));
     const frac  = parseFloat(p[party + '_fraction'] || 0.2) || 0.2;
@@ -420,24 +432,28 @@ function optionC(seat) {
     raw[party]  = Math.max(floor, Math.max(0, local + swing * hd * 2 * mult));
   });
 
-  // Apply overrides
-  const pinned = Object.keys(ovr);
-  if (pinned.length > 0) {
-    // A seat with hand-pinned overrides is one Bobby has explicitly set —
-    // skip tactical voting here so the pin stays exactly what was entered.
-    const pinnedTotal  = pinned.reduce((s, p) => s + ovr[p], 0);
-    const free         = MP.filter(p => !pinned.includes(p));
-    const freeTotal    = free.reduce((s, p) => s + (raw[p] || 0), 0);
-    const scale        = freeTotal > 0 ? Math.max(0, 100 - pinnedTotal) / freeTotal : 0;
-    pinned.forEach(p => raw[p] = ovr[p] / 100);
-    free.forEach(p   => raw[p] = (raw[p] || 0) * scale / 100);
+  // Hard pins (override present, no reference poll recorded) keep their
+  // exact entered value untouched by normalisation; everything else —
+  // ordinary seats and poll-tracking overrides alike — is scaled to fill
+  // whatever's left, same as the rest of the model.
+  const hardPinned = MP.filter(party => ovr[party] && ovr[party].refPoll == null);
+  if (hardPinned.length > 0) {
+    const pinnedTotal = hardPinned.reduce((s, party) => s + (raw[party] || 0), 0);
+    const free        = MP.filter(party => !hardPinned.includes(party));
+    const freeTotal   = free.reduce((s, party) => s + (raw[party] || 0), 0);
+    const scale       = freeTotal > 0 ? Math.max(0, 1 - pinnedTotal) / freeTotal : 0;
+    free.forEach(party => raw[party] = (raw[party] || 0) * scale);
+  } else {
+    const tot = MP.reduce((s, party) => s + (raw[party] || 0), 0);
+    if (tot > 0) MP.forEach(party => raw[party] = (raw[party] || 0) / tot);
+  }
 
+  // A seat with any override is one Bobby has explicitly set — skip
+  // tactical voting so those numbers stay exactly what was entered.
+  if (Object.keys(ovr).length > 0) {
     const sorted = MP.slice().sort((a, b) => (raw[b] || 0) - (raw[a] || 0));
     return { winner: sorted[0], margin: ((raw[sorted[0]] || 0) - (raw[sorted[1]] || 0)) * 100, shares: raw };
   }
-
-  const tot = MP.reduce((s, p) => s + (raw[p] || 0), 0);
-  if (tot > 0) MP.forEach(p => raw[p] = (raw[p] || 0) / tot);
 
   // Tactical voting — second pass on top of Option C's own swung shares
   const tactical = applyTacticalVoting(seat, raw);
@@ -586,7 +602,17 @@ async function loadData() {
       parseCSV(await oResp.text()).forEach(row => {
         const code = (row['PCON24CD'] || '').trim(); if (!code) return;
         const ovr = {};
-        MP.forEach(p => { const v = parseFloat(row[p]); if (!isNaN(v) && v > 0 && row[p] !== '' && row[p] !== '0') ovr[p] = v; });
+        MP.forEach(p => {
+          const v = parseFloat(row[p]);
+          if (isNaN(v) || v <= 0 || row[p] === '' || row[p] === '0') return;
+          // {party}_ref = regional poll level when the result was recorded.
+          // Present -> the override rides current polling like any other
+          // seat (local baseline + swing since that reference point).
+          // Blank  -> old behaviour, a flat pin with no swing applied.
+          const refRaw = row[p + '_ref'];
+          const ref = parseFloat(refRaw);
+          ovr[p] = { result: v, refPoll: (refRaw !== undefined && refRaw !== '' && !isNaN(ref)) ? ref : null };
+        });
         if (Object.keys(ovr).length) OVERRIDES[code] = ovr;
       });
     }
