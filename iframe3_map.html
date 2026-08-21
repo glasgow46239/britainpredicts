@@ -448,14 +448,10 @@ function optionC(seat) {
     if (tot > 0) MP.forEach(party => raw[party] = (raw[party] || 0) / tot);
   }
 
-  // A seat with any override is one Bobby has explicitly set — skip
-  // tactical voting so those numbers stay exactly what was entered.
-  if (Object.keys(ovr).length > 0) {
-    const sorted = MP.slice().sort((a, b) => (raw[b] || 0) - (raw[a] || 0));
-    return { winner: sorted[0], margin: ((raw[sorted[0]] || 0) - (raw[sorted[1]] || 0)) * 100, shares: raw };
-  }
-
-  // Tactical voting — second pass on top of Option C's own swung shares
+  // Tactical voting — second pass on top of Option C's own swung shares.
+  // Runs even in seats with an override: applyTacticalVoting protects the
+  // specific overridden parties from moving, but leaves everyone else in
+  // the seat free to squeeze against each other normally.
   const tactical = applyTacticalVoting(seat, raw);
 
   const sorted = MP.slice().sort((a, b) => (tactical[b] || 0) - (tactical[a] || 0));
@@ -509,6 +505,12 @@ function candidateWeight(from, to, leader) {
 function applyTacticalVoting(seat, shares) {
   if (!TACTICAL_ENABLED) return shares;
 
+  // Overridden parties in this seat are Bobby's explicit judgment — they
+  // never donate or receive tactically, but everyone else in the seat
+  // still squeezes against each other (and against the leader) normally,
+  // even if the leader itself happens to be an overridden party.
+  const protectedParties = new Set(Object.keys(OVERRIDES[seat.code] || {}));
+
   const sorted = MP.slice().sort((a, b) => (shares[b] || 0) - (shares[a] || 0));
   const leader = sorted[0];
   const trailing = sorted.slice(1).filter(p => (shares[p] || 0) > 0.001);
@@ -524,8 +526,11 @@ function applyTacticalVoting(seat, shares) {
 
   const adjusted = Object.assign({}, shares);
   trailing.forEach(from => {
+    if (protectedParties.has(from)) return; // overridden parties never donate
     // Only lend "up" — to a rival at least as strong as yourself in this seat.
-    const candidates = trailing.filter(to => to !== from && (shares[to] || 0) >= (shares[from] || 0));
+    const candidates = trailing.filter(to =>
+      to !== from && !protectedParties.has(to) && (shares[to] || 0) >= (shares[from] || 0)
+    );
     if (!candidates.length) return;
 
     const weights = {};
@@ -551,9 +556,18 @@ function applyTacticalVoting(seat, shares) {
   });
 
   // Abstention removes votes without handing them to anyone — renormalise
-  // the seat back to 100% among whoever's left.
-  const tot = MP.reduce((s, p) => s + (adjusted[p] || 0), 0);
-  if (tot > 0) MP.forEach(p => adjusted[p] = (adjusted[p] || 0) / tot);
+  // the seat back to 100%. Overridden parties are held exact, same as in
+  // optionC(): everyone else absorbs the renormalisation instead.
+  if (protectedParties.size > 0) {
+    const protectedTotal = [...protectedParties].reduce((s, p) => s + (adjusted[p] || 0), 0);
+    const free = MP.filter(p => !protectedParties.has(p));
+    const freeTotal = free.reduce((s, p) => s + (adjusted[p] || 0), 0);
+    const scale = freeTotal > 0 ? Math.max(0, 1 - protectedTotal) / freeTotal : 0;
+    free.forEach(p => adjusted[p] = (adjusted[p] || 0) * scale);
+  } else {
+    const tot = MP.reduce((s, p) => s + (adjusted[p] || 0), 0);
+    if (tot > 0) MP.forEach(p => adjusted[p] = (adjusted[p] || 0) / tot);
+  }
   return adjusted;
 }
 
