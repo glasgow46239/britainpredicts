@@ -250,36 +250,56 @@ const BASELINE_2024 = {
 // ============================================================
 // TACTICAL VOTING CONFIG
 // ============================================================
-// Two optional sheet tabs, same spreadsheet as everything else. Both are
-// optional — leave the URLs null and the model runs on the defaults below.
+// Three optional sheet tabs, same spreadsheet as everything else. All are
+// optional — leave a URL null and the model runs on the defaults below.
+//
+//   "Tactical Party Positions" — columns: party,econ,temper,willingness,abstain
+//                           Where each party sits on two axes (econ: -1 left
+//                           .. +1 right; temper: 0 establishment .. 1 populist/
+//                           insurgent), how tactically-minded its voters are
+//                           overall (willingness, 0-1), and what share of any
+//                           leaked vote just doesn't turn out rather than
+//                           transferring (abstain, 0-1). This is the primary
+//                           engine — affinity between any two parties in a
+//                           given seat is DERIVED from these positions plus
+//                           who's actually leading, so it varies by context
+//                           automatically (a moderate Con voter's willingness
+//                           to lend to Labour rises specifically in seats
+//                           where Reform, not Labour, is the frontrunner).
 //   "Tactical Affinity"  — columns: from,con,lab,ldem,grn,snp,pc,ref,oth
-//                           value = % of "from" party's vote willing to be
-//                           lent to the column party at max closeness/intensity.
+//                           Manual override on top of the computed positions.
+//                           Leave a cell blank to let the compass model decide
+//                           that pair; fill one in (0-100%) to hard-set it.
 //   "Tactical Intensity" — columns: PCON24CD,intensity
 //                           per-seat multiplier on the squeeze strength,
 //                           default 1 if the seat has no row. Use this for
 //                           seats with an unusually hot local campaign.
+const POSITIONS_URL = BASE + '2070464065&single=true&output=csv';
 const AFFINITY_URL  = BASE + '789919651&single=true&output=csv';
 const INTENSITY_URL = BASE + '1557796036&single=true&output=csv';
 
-// Seed affinity matrix (fractions 0-1) — used until AFFINITY_URL is set,
-// and as the fallback for any "from" party missing from the sheet.
-const DEFAULT_AFFINITY = {
-  con:  { ref:0.55, ldem:0.05 },
-  ref:  { con:0.55 },
-  lab:  { ldem:0.35, grn:0.20 },
-  ldem: { lab:0.45, grn:0.15, con:0.05 },
-  grn:  { lab:0.60, ldem:0.25 },
-  snp:  { lab:0.20 },
-  pc:   { lab:0.20 },
-  oth:  {},
+// Seed party positions — used until POSITIONS_URL is set, and as the
+// fallback for any party missing a row in that sheet.
+const DEFAULT_POSITIONS = {
+  con:  { econ: 0.6,  temper: 0.2,  willingness: 0.45, abstain: 0.35 },
+  ref:  { econ: 0.5,  temper: 0.9,  willingness: 0.25, abstain: 0.10 },
+  lab:  { econ: -0.5, temper: 0.15, willingness: 0.40, abstain: 0.20 },
+  ldem: { econ: -0.2, temper: 0.15, willingness: 0.70, abstain: 0.10 },
+  grn:  { econ: -0.8, temper: 0.35, willingness: 0.75, abstain: 0.10 },
+  snp:  { econ: -0.4, temper: 0.30, willingness: 0.30, abstain: 0.15 },
+  pc:   { econ: -0.4, temper: 0.30, willingness: 0.30, abstain: 0.15 },
+  oth:  { econ: 0,    temper: 0.5,  willingness: 0.20, abstain: 0.30 },
 };
 
-// Squeeze shape — how fast the pull fades with distance from 1st, and the
-// hard ceiling on how much of any one party's vote can be tactically lent
-// away. Per-seat/global "intensity" (below) scales on top of these.
-const CLOSENESS_SCALE      = 0.30; // squeeze fades to 0 once the leader is >30pts clear of the challenger
-const MAX_SQUEEZE_FRACTION = 0.65; // no donor party ever loses more than 65% of its vote tactically
+// Manual affinity overrides (fractions 0-1) — sparse by design. Only pairs
+// listed here skip the compass calculation; everything else is derived.
+const DEFAULT_AFFINITY = {};
+
+// Squeeze shape.
+const D_SCALE               = 1.0;  // compass-distance normaliser
+const PROTEST_FLOOR         = 0.12; // small "anyone but them" weight even for ideologically distant allies
+const CLOSENESS_SCALE       = 0.30; // squeeze fades to 0 once the leader is >30pts clear of the strongest trailing party
+const MAX_SQUEEZE_FRACTION  = 0.65; // hard ceiling: no donor party ever loses more than 65% of its vote tactically
 
 // ============================================================
 // STATE
@@ -289,6 +309,7 @@ let OVERRIDES = {};
 let STANDING  = {};
 let POLL_MAP  = {};
 let DATA      = {};
+let POSITIONS      = DEFAULT_POSITIONS;
 let AFFINITY       = DEFAULT_AFFINITY;
 let SEAT_INTENSITY = {};   // PCON24CD -> multiplier, from Tactical Intensity tab
 let TACTICAL_ENABLED = true;
@@ -428,12 +449,47 @@ function optionC(seat) {
 // ============================================================
 // TACTICAL VOTING
 // ============================================================
-// In each un-pinned seat: find the trailing party that other trailing
-// parties' voters would most readily lend votes to ("least disliked" —
-// own share plus affinity-weighted borrowed support), then pull votes
-// toward that challenger from the other trailing parties, scaled by how
-// close the race is and by intensity (seat override x global scenario
-// slider). Parties with zero affinity toward the challenger never move.
+// Compass model: each party sits on an (econ, temper) position. For a donor
+// party "from" considering a trailing rival "to" as somewhere to lend votes,
+// its weight is how much closer "to" is to "from" than the seat's leader is
+// (relCloseness), plus a small flat "anyone but them" floor scaled by how
+// repugnant the leader is to "from" (so a little always leaks toward a
+// viable ally even when it's not the ideologically closest one — this is
+// what lets, say, a Con voter send a smidge to Labour specifically in a
+// Lab/Reform marginal, without it happening in a Lab/Con marginal). A
+// manual "Tactical Affinity" sheet entry overrides the computed weight for
+// that specific pair.
+//
+// A party only ever lends "up" to a rival that's at least as strong as
+// itself in that seat — never down to a weaker one. The total fraction of
+// a party's vote that can leak at all is capped by its own willingness and
+// by how attractive its best available option is (maxWeight) — not by
+// summing affinities across every possible recipient, which would let a
+// party with several so-so options leak an implausibly large share. Some
+// of what leaks doesn't transfer anywhere (per-party "abstain" share) —
+// it just evaporates, and the seat is renormalised back to 100% after.
+function relCloseness(from, to, leader) {
+  const pf = POSITIONS[from], pt = POSITIONS[to], pl = POSITIONS[leader];
+  if (!pf || !pt || !pl || from === leader) return 0;
+  const distTo     = Math.hypot(pf.econ - pt.econ, pf.temper - pt.temper);
+  const distLeader = Math.hypot(pf.econ - pl.econ, pf.temper - pl.temper);
+  if (distLeader <= 0) return 0;
+  return Math.max(0, Math.min(1, (distLeader - distTo) / distLeader));
+}
+
+function repugnance(from, leader) {
+  const pf = POSITIONS[from], pl = POSITIONS[leader];
+  if (!pf || !pl) return 0;
+  return Math.max(0, Math.min(1, Math.hypot(pf.econ - pl.econ, pf.temper - pl.temper) / D_SCALE));
+}
+
+function candidateWeight(from, to, leader) {
+  const manual = AFFINITY[from] && AFFINITY[from][to];
+  if (manual != null) return manual; // hand-set override, used as-is
+  const w = relCloseness(from, to, leader) + PROTEST_FLOOR * repugnance(from, leader);
+  return Math.max(0, Math.min(1, w));
+}
+
 function applyTacticalVoting(seat, shares) {
   if (!TACTICAL_ENABLED) return shares;
 
@@ -442,19 +498,7 @@ function applyTacticalVoting(seat, shares) {
   const trailing = sorted.slice(1).filter(p => (shares[p] || 0) > 0.001);
   if (trailing.length < 2) return shares; // nothing to squeeze between
 
-  const strengths = {};
-  trailing.forEach(to => {
-    let s = shares[to] || 0;
-    trailing.forEach(from => {
-      if (from === to) return;
-      const aff = (AFFINITY[from] && AFFINITY[from][to]) || 0;
-      s += (shares[from] || 0) * aff * 0.5; // ranking weight only — not the actual transfer
-    });
-    strengths[to] = s;
-  });
-  const challenger = trailing.slice().sort((a, b) => strengths[b] - strengths[a])[0];
-
-  const margin = (shares[leader] || 0) - (shares[challenger] || 0);
+  const margin = (shares[leader] || 0) - (shares[trailing[0]] || 0);
   const closeness = Math.max(0, 1 - margin / CLOSENESS_SCALE);
   if (closeness <= 0) return shares;
 
@@ -464,16 +508,36 @@ function applyTacticalVoting(seat, shares) {
 
   const adjusted = Object.assign({}, shares);
   trailing.forEach(from => {
-    if (from === challenger) return;
-    const aff = (AFFINITY[from] && AFFINITY[from][challenger]) || 0;
-    if (aff <= 0) return;
-    const pull = Math.min(
-      (shares[from] || 0) * MAX_SQUEEZE_FRACTION,
-      (shares[from] || 0) * aff * closeness * intensity
-    );
-    adjusted[from] = Math.max(0, (adjusted[from] || 0) - pull);
-    adjusted[challenger] = (adjusted[challenger] || 0) + pull;
+    // Only lend "up" — to a rival at least as strong as yourself in this seat.
+    const candidates = trailing.filter(to => to !== from && (shares[to] || 0) >= (shares[from] || 0));
+    if (!candidates.length) return;
+
+    const weights = {};
+    let totalWeight = 0, maxWeight = 0;
+    candidates.forEach(to => {
+      const w = candidateWeight(from, to, leader);
+      if (w > 0) { weights[to] = w; totalWeight += w; maxWeight = Math.max(maxWeight, w); }
+    });
+    if (totalWeight <= 0) return;
+
+    const willingness = (POSITIONS[from] && POSITIONS[from].willingness) || 0;
+    const leakFraction = Math.min(MAX_SQUEEZE_FRACTION, willingness * maxWeight * closeness * intensity);
+    const totalLeak = (shares[from] || 0) * leakFraction;
+    if (totalLeak <= 0) return;
+
+    const abstainShare = (POSITIONS[from] && POSITIONS[from].abstain) || 0;
+    const transferPool = totalLeak * (1 - abstainShare);
+    candidates.forEach(to => {
+      const w = weights[to]; if (!w) return;
+      adjusted[to] = (adjusted[to] || 0) + transferPool * (w / totalWeight);
+    });
+    adjusted[from] = Math.max(0, (adjusted[from] || 0) - totalLeak);
   });
+
+  // Abstention removes votes without handing them to anyone — renormalise
+  // the seat back to 100% among whoever's left.
+  const tot = MP.reduce((s, p) => s + (adjusted[p] || 0), 0);
+  if (tot > 0) MP.forEach(p => adjusted[p] = (adjusted[p] || 0) / tot);
   return adjusted;
 }
 
@@ -573,6 +637,28 @@ async function loadData() {
           SEAT_INTENSITY = parsed;
         }
       } catch (e) { console.warn('Tactical intensity fetch failed, using defaults:', e); }
+    }
+
+    if (POSITIONS_URL) {
+      try {
+        const posResp = await fetchWithRetry(POSITIONS_URL + '&_=' + Date.now());
+        if (posResp && posResp.ok) {
+          const parsed = {};
+          parseCSV(await posResp.text()).forEach(row => {
+            const party = (row['party'] || Object.values(row)[0] || '').trim().toLowerCase();
+            if (!party) return;
+            const econ = parseFloat(row['econ']), temper = parseFloat(row['temper']),
+                  willingness = parseFloat(row['willingness']), abstain = parseFloat(row['abstain']);
+            parsed[party] = {
+              econ: isNaN(econ) ? 0 : econ,
+              temper: isNaN(temper) ? 0.5 : temper,
+              willingness: isNaN(willingness) ? 0 : willingness,
+              abstain: isNaN(abstain) ? 0 : abstain,
+            };
+          });
+          if (Object.keys(parsed).length) POSITIONS = parsed;
+        }
+      } catch (e) { console.warn('Tactical positions fetch failed, using defaults:', e); }
     }
 
     if (!rResp || !rResp.ok) throw new Error('results_2024.csv fetch failed');
