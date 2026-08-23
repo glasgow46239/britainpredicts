@@ -505,11 +505,19 @@ function candidateWeight(from, to, leader) {
 function applyTacticalVoting(seat, shares) {
   if (!TACTICAL_ENABLED) return shares;
 
-  // Overridden parties in this seat are Bobby's explicit judgment — they
-  // never donate or receive tactically, but everyone else in the seat
-  // still squeezes against each other (and against the leader) normally,
-  // even if the leader itself happens to be an overridden party.
-  const protectedParties = new Set(Object.keys(OVERRIDES[seat.code] || {}));
+  // Only TRUE hard pins (an override with no reference poll — an explicit
+  // "don't touch this number") are protected from tactical voting. A
+  // poll-tracking override (has a reference poll) is just a better
+  // baseline, same role a party's 2024 result plays normally — it fully
+  // participates as a donor and recipient like anyone else. In practice
+  // this means a seat with several poll-tracking overrides (the common
+  // case — overriding most of a seat's parties at once from a by-election
+  // or local election) still squeezes normally; only genuinely frozen
+  // parties sit out.
+  const seatOvr = OVERRIDES[seat.code] || {};
+  const protectedParties = new Set(
+    Object.keys(seatOvr).filter(party => seatOvr[party].refPoll == null)
+  );
 
   const sorted = MP.slice().sort((a, b) => (shares[b] || 0) - (shares[a] || 0));
   const leader = sorted[0];
