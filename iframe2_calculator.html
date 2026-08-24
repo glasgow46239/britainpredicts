@@ -47,17 +47,17 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 .toggle         { width:2.375rem; height:1.375rem; border-radius:0.6875rem; position:relative; transition:background .15s; flex-shrink:0; }
 .toggle-knob    { position:absolute; top:2px; width:1.125rem; height:1.125rem; border-radius:50%; background:#fff; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.25); }
 
-#run-wrap{ padding:0 1.25rem 0.875rem; }
+#run-wrap{ padding:0; }
 #run-btn { width:100%; padding:0.875rem; background:#111; color:#fff; border:none; border-radius:8px; font-size:1.0625rem; font-weight:700; cursor:pointer; font-family:inherit; }
 #run-btn:hover{ background:#333; }
 
-#results { padding:0 1.25rem 1rem; display:none; }
+#results { padding:0; display:none; }
 #results-head{ display:flex; align-items:center; justify-content:space-between; gap:0.5rem; margin-bottom:0.5rem; }
 #rlbl    { font-size:0.75rem; font-weight:700; color:#666; text-transform:uppercase; letter-spacing:.05em; }
 .export-btn{ padding:0.4375rem 0.75rem; border:1px solid #e0e0e0; border-radius:12px; font-size:0.75rem; font-weight:700; cursor:pointer; background:#fff; color:#555; font-family:inherit; white-space:nowrap; }
 .export-btn:hover{ background:#f5f5f5; }
-#rgrid   { display:grid; grid-template-columns:repeat(4,1fr); gap:0.625rem; }
-@media(min-width:500px){ #rgrid { grid-template-columns:repeat(8,1fr); } }
+#rgrid   { display:grid; grid-template-columns:repeat(2,1fr); gap:0.625rem; }
+@media(min-width:480px){ #rgrid { grid-template-columns:repeat(4,1fr); } }
 .rc      { display:flex; flex-direction:column; align-items:flex-end; padding:0.875rem 0.875rem 0.75rem; border-radius:0; color:#fff; }
 .r-num   { font-size:3.5rem; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; text-align:right; }
 .r-chg   { font-size:2rem; font-weight:500; margin-top:0.25rem; font-variant-numeric:tabular-nums; color:rgba(255,255,255,.82); text-align:right; }
@@ -87,8 +87,8 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
     <div id="gb-grid" class="grid8"></div>
     <div class="ctrl">
       <div class="ctrl-l">
-        <button class="cbtn" onclick="normaliseGB()">Reset to poll</button>
-        <button class="cbtn" onclick="evenSplitGB()">Even split</button>
+        <button class="cbtn" onclick="resetGB()">Reset to poll</button>
+        <button class="cbtn" onclick="normaliseGBToTotal()">Normalise</button>
       </div>
       <div class="tlbl" style="text-align:right;">Con&ndash;Ind total: <span class="tval" id="tot-gb" style="color:#059669">&mdash;</span><br>SNP &amp; PC use their own regional base</div>
     </div>
@@ -103,7 +103,7 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
     <div class="ctrl">
       <div class="ctrl-l">
         <button class="cbtn" onclick="resetReg()">Reset to poll</button>
-        <button class="cbtn" onclick="evenSplitReg()">Even split</button>
+        <button class="cbtn" onclick="normaliseRegToTotal()">Normalise</button>
       </div>
       <div class="tlbl">Total: <span class="tval" id="tot-reg">&mdash;</span></div>
     </div>
@@ -229,7 +229,7 @@ function buildGBInputs() {
     col.innerHTML = `<div class="il" style="color:${COLOURS[p]}">${LABELS[p]}${sub}</div>
       <input class="if${isRegional?' if-region':''}" id="gb_${p}" type="number" step="0.1" min="0" max="70"
         value="${initVal.toFixed(1)}" style="color:${COLOURS[p]};border-color:${COLOURS[p]}44"
-        oninput="onGBChange()">`;
+        oninput="onGBChange()" onfocus="this.select()">`;
     grid.appendChild(col);
   });
   updateTotalGB();
@@ -251,7 +251,7 @@ function onGBChange() {
   });
 }
 
-function normaliseGB() {
+function resetGB() {
   const liveGB = livePollMap['GB-wide']||{};
   const liveScotland = livePollMap['Scotland']||{};
   const liveWales = livePollMap['Wales']||{};
@@ -264,9 +264,13 @@ function normaliseGB() {
   loadRegionIntoInputs(currentRegion);
 }
 
-function evenSplitGB() {
-  const share = (100/GB_MAIN_PARTIES.length);
-  GB_MAIN_PARTIES.forEach(p => setVal('gb_'+p, share));
+// Scales whatever's currently entered so the 6 main parties sum to exactly
+// 100%, preserving their relative proportions. SNP/PC sit outside this total
+// (their own regional base) so they're left untouched.
+function normaliseGBToTotal() {
+  let t = 0; GB_MAIN_PARTIES.forEach(p => { t += val('gb_'+p); });
+  if (t <= 0) return;
+  GB_MAIN_PARTIES.forEach(p => { setVal('gb_'+p, val('gb_'+p)/t*100); });
   onGBChange();
 }
 
@@ -294,7 +298,7 @@ function buildRegionInputs() {
     col.innerHTML = `<div class="il" style="color:${COLOURS[p]}">${LABELS[p]}</div>
       <input class="if" id="reg_${p}" type="number" step="0.1" min="0" max="70"
         value="0.0" style="color:${COLOURS[p]};border-color:${COLOURS[p]}44"
-        oninput="onRegionInputChange()">`;
+        oninput="onRegionInputChange()" onfocus="this.select()">`;
     grid.appendChild(col);
   });
   loadRegionIntoInputs(currentRegion);
@@ -327,10 +331,13 @@ function resetReg() {
   syncGBFromRegion();
 }
 
-function evenSplitReg() {
-  const share = (100/PARTIES.length);
+// Scales the selected region's currently-entered shares so all 8 parties
+// sum to exactly 100%, preserving their relative proportions.
+function normaliseRegToTotal() {
+  let t = 0; PARTIES.forEach(p => { t += val('reg_'+p); });
+  if (t <= 0) return;
   const edits = regionEdits[currentRegion] || (regionEdits[currentRegion] = {});
-  PARTIES.forEach(p => { edits[p] = share; });
+  PARTIES.forEach(p => { edits[p] = val('reg_'+p)/t*100; });
   loadRegionIntoInputs(currentRegion);
   syncGBFromRegion();
 }
@@ -421,6 +428,17 @@ async function init() {
   }
 }
 init();
+
+// ── Auto-resize ──────────────────────────────────────────────────────────
+// A fixed iframe height can't fit every tab/state of this calculator at
+// once — so report actual content height to the parent page instead, which
+// resizes the <iframe> to match. See README.md for the parent-page listener
+// this depends on.
+function reportHeight() {
+  window.parent.postMessage({ action:'resize', frame:'calculator', height:document.documentElement.scrollHeight }, '*');
+}
+new ResizeObserver(reportHeight).observe(document.body);
+window.addEventListener('load', reportHeight);
 </script>
 </body>
 </html>
