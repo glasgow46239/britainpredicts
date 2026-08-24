@@ -11,8 +11,7 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 #error   { padding:16px; color:#c00; font-size:12px; display:none; }
 #wrap    { display:none; background:#fff; }
 
-#tiles-wrap { padding:1.125rem 1rem 0.625rem; }
-@media(min-width:480px){ #tiles-wrap { padding:1.125rem 1.25rem 0.625rem; } }
+#tiles-wrap { padding:0; }
 .tiles   { display:grid; grid-template-columns:repeat(2,1fr); gap:0.5rem; }
 @media(min-width:480px){ .tiles { grid-template-columns:repeat(4,1fr); } }
 .tile    { display:flex; flex-direction:column; align-items:flex-end; padding:1.125rem 1rem 1rem; border-radius:0; color:#fff; }
@@ -21,8 +20,8 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 .t-rule  { height:2px; margin:0.5rem 0; background:rgba(0,0,0,.25); align-self:stretch; }
 .t-label { font-size:2rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; text-align:right; }
 
-#btns    { display:flex; flex-direction:column; gap:0.5rem; padding:0.375rem 1rem 0.625rem; }
-@media(min-width:480px){ #btns { flex-direction:row; gap:0.625rem; padding:0.375rem 1.25rem 0.625rem; } }
+#btns    { display:flex; flex-direction:column; gap:0.5rem; padding:0; }
+@media(min-width:480px){ #btns { flex-direction:row; gap:0.625rem; } }
 .btn     { width:100%; padding:1rem; border:none; border-radius:8px; font-size:1rem; font-weight:700; cursor:pointer; font-family:inherit; transition:background .15s; }
 @media(min-width:480px){ .btn { flex:1; width:auto; padding:0.875rem 1rem; } }
 .btn-primary   { background:#111; color:#fff; }
@@ -129,6 +128,17 @@ setTimeout(() => {
     document.getElementById('loading').textContent = 'Waiting for map to load…';
   }
 }, 12000);
+
+// ── Auto-resize ──────────────────────────────────────────────────────────
+// A fixed iframe height can't fit both the 2-col mobile grid and the 4-col
+// desktop grid at once (different total heights) — so report actual content
+// height to the parent page instead, which resizes the <iframe> to match.
+// See README.md for the parent-page listener this depends on.
+function reportHeight() {
+  window.parent.postMessage({ action:'resize', frame:'forecast', height:document.documentElement.scrollHeight }, '*');
+}
+new ResizeObserver(reportHeight).observe(document.body);
+window.addEventListener('load', reportHeight);
 </script>
 </body>
 </html>
