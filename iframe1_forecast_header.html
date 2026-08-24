@@ -5,51 +5,71 @@
 <title>Britain Predicts</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:Arial,sans-serif; background:#fff; }
+html { font-size:16px; }
+body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff; }
 #loading { padding:24px; color:#999; font-size:13px; text-align:center; }
 #error   { padding:16px; color:#c00; font-size:12px; display:none; }
-#wrap    { display:none; }
-#header  { padding:10px 16px 8px; border-bottom:2px solid #111; }
-#brand   { font-size:14px; font-weight:700; color:#111; }
-#sub     { font-size:10px; color:#999; margin-top:2px; }
-#tiles   { display:flex; flex-wrap:wrap; gap:6px; padding:12px 16px 8px; }
-.tile    { flex:1; min-width:60px; max-width:110px; display:flex; flex-direction:column;
-           align-items:center; padding:8px 6px 6px; border-radius:5px; }
-.t-party { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
-.t-seats { font-size:26px; font-weight:700; line-height:1; }
-.t-chg   { font-size:10px; margin-top:3px; opacity:.85; }
-.t-bar   { width:100%; height:3px; border-radius:2px; margin-top:6px; opacity:.45; }
-#btns    { display:flex; gap:8px; padding:8px 16px 12px; }
-.btn     { flex:1; padding:9px 12px; border:none; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer; }
-.btn-d   { background:#111; color:#fff; } .btn-d:hover { background:#333; }
-.btn-l   { background:#f0ede8; color:#111; } .btn-l:hover { background:#e5e0da; }
-#status  { font-size:9px; color:#ccc; text-align:right; padding:0 16px 6px; }
+#wrap    { display:none; background:#fff; }
+
+#tiles-wrap { padding:1.125rem 1rem 0.625rem; }
+@media(min-width:480px){ #tiles-wrap { padding:1.125rem 1.25rem 0.625rem; } }
+.tiles   { display:grid; grid-template-columns:repeat(2,1fr); gap:0.5rem; }
+@media(min-width:480px){ .tiles { grid-template-columns:repeat(4,1fr); } }
+.tile    { display:flex; flex-direction:column; align-items:flex-end; padding:1.125rem 1rem 1rem; border-radius:0; color:#fff; }
+.t-num   { font-size:3.5rem; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; text-align:right; }
+.t-chg   { font-size:2rem; font-weight:500; margin-top:0.25rem; font-variant-numeric:tabular-nums; color:rgba(255,255,255,.82); text-align:right; }
+.t-rule  { height:2px; margin:0.5rem 0; background:rgba(0,0,0,.25); align-self:stretch; }
+.t-label { font-size:2rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; text-align:right; }
+
+#btns    { display:flex; flex-direction:column; gap:0.5rem; padding:0.375rem 1rem 0.625rem; }
+@media(min-width:480px){ #btns { flex-direction:row; gap:0.625rem; padding:0.375rem 1.25rem 0.625rem; } }
+.btn     { width:100%; padding:1rem; border:none; border-radius:8px; font-size:1rem; font-weight:700; cursor:pointer; font-family:inherit; transition:background .15s; }
+@media(min-width:480px){ .btn { flex:1; width:auto; padding:0.875rem 1rem; } }
+.btn-primary   { background:#111; color:#fff; }
+.btn-primary:hover   { background:#333; }
+.btn-secondary { background:#f0ede8; color:#111; }
+.btn-secondary:hover { background:#e5e0da; }
+
+#tactical-wrap  { padding:0 1rem 1.125rem; }
+@media(min-width:480px){ #tactical-wrap { padding:0 1.25rem 1.125rem; } }
+.tactical-row   { display:flex; align-items:center; justify-content:space-between; gap:0.625rem; padding:0.75rem 0.875rem; border-radius:8px; background:#f5f5f5; }
+.tactical-label { font-size:1rem; font-weight:600; color:#333; }
+.toggle-tap     { display:flex; align-items:center; gap:0.5rem; cursor:pointer; flex-shrink:0; padding:0.6875rem 0.25rem; margin:-0.6875rem -0.25rem; }
+.toggle         { width:2.375rem; height:1.375rem; border-radius:0.6875rem; position:relative; transition:background .15s; flex-shrink:0; }
+.toggle-knob    { position:absolute; top:2px; width:1.125rem; height:1.125rem; border-radius:50%; background:#fff; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.25); }
 </style>
 </head>
 <body>
 <div id="loading">Loading forecast…</div>
 <div id="error"></div>
 <div id="wrap">
-  <div id="header">
-    <div id="brand">Britain Predicts</div>
-    <div id="sub"></div>
-  </div>
-  <div id="tiles"></div>
+  <div id="tiles-wrap"><div id="tiles" class="tiles"></div></div>
   <div id="btns">
-    <button class="btn btn-d" onclick="window.parent.postMessage({action:'scrollToCalculator'},'*')">Create your own forecast</button>
-    <button class="btn btn-l" onclick="window.parent.postMessage({action:'scrollToMap'},'*')">Map</button>
+    <button class="btn btn-primary" onclick="window.parent.postMessage({action:'scrollToCalculator'},'*')">Create your own forecast</button>
+    <button class="btn btn-secondary" onclick="window.parent.postMessage({action:'scrollToMap'},'*')">View the map</button>
   </div>
-  <div id="status"></div>
+  <div id="tactical-wrap">
+    <div class="tactical-row">
+      <span class="tactical-label">Tactical voting &mdash; see the effect on the numbers above</span>
+      <div class="toggle-tap" id="tactical-hit">
+        <div class="toggle" id="toggle-track">
+          <div class="toggle-knob" id="toggle-knob"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 <script>
 // iframe1 is a DISPLAY ONLY layer.
-// It receives seat counts from iframe3 via the parent relay.
-// It fetches the polling CSV only to show the subtitle.
+// It receives seat counts (and a with/without-tactical pair for the local
+// flick toggle) from iframe3 via the parent relay. It runs no model itself.
 
-const POLL_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=0&single=true&output=csv';
-const LABELS   = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Reform',oth:'Other'};
-const COLOURS  = {con:'#0087DC',lab:'#E4003B',ldem:'#FAA61A',grn:'#02A95B',snp:'#C8A400',pc:'#3F8428',ref:'#12B6CF',oth:'#57534e'};
-const S24      = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
+const LABELS  = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Ref',oth:'Ind'};
+const COLOURS = {con:'#05718F',lab:'#D34C4C',ldem:'#EBB82F',grn:'#5CBC4A',snp:'#EEE03C',pc:'#469366',ref:'#15B6C2',oth:'#CCA7C6'};
+const ALPHA   = {con:.12,lab:.12,ldem:.40,grn:.25,snp:.48,pc:.12,ref:.20,oth:.40};
+const S24     = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
+
+let lastCounts = null, lastWith = null, lastWithout = null, tacticalOn = true;
 
 function renderTiles(counts) {
   const order = Object.keys(counts).sort((a,b) => (counts[b]||0)-(counts[a]||0));
@@ -57,25 +77,49 @@ function renderTiles(counts) {
   el.innerHTML = '';
   for (const p of order) {
     const n = counts[p]||0, prev = S24[p]||0, d = n-prev;
+    const colour = COLOURS[p]||'#999', a = ALPHA[p]!=null?ALPHA[p]:0.15;
     const t = document.createElement('div');
     t.className = 'tile';
-    t.style.background = (COLOURS[p]||'#999')+'18';
-    t.innerHTML = `<div class="t-party" style="color:${COLOURS[p]||'#999'}">${LABELS[p]||p}</div>
-      <div class="t-seats" style="color:${COLOURS[p]||'#999'}">${n}</div>
-      <div class="t-chg"   style="color:${COLOURS[p]||'#999'}">${d>=0?'+':''}${d}</div>
-      <div class="t-bar"   style="background:${COLOURS[p]||'#999'}"></div>`;
+    t.style.background = colour;
+    t.style.boxShadow = 'inset 0 0 0 999px rgba(0,0,0,'+a+')';
+    t.innerHTML = `<div class="t-num">${n}</div>
+      <div class="t-chg">${d>=0?'+':''}${d}</div>
+      <div class="t-rule"></div>
+      <div class="t-label">${LABELS[p]||p}</div>`;
     el.appendChild(t);
   }
   document.getElementById('loading').style.display = 'none';
   document.getElementById('wrap').style.display = 'block';
-  const total = Object.values(counts).reduce((a,b)=>a+b,0);
-  document.getElementById('status').textContent = total + ' seats projected';
 }
 
-// Receive seat counts from iframe3 via parent relay
+function updateToggleUI() {
+  document.getElementById('toggle-track').style.background = tacticalOn ? '#111' : '#ddd';
+  document.getElementById('toggle-knob').style.left = tacticalOn ? '18px' : '2px';
+}
+
+function displayForCurrentToggle() {
+  const counts = tacticalOn ? (lastWith || lastCounts) : (lastWithout || lastCounts);
+  if (counts) renderTiles(counts);
+}
+
+document.getElementById('tactical-hit').addEventListener('click', () => {
+  tacticalOn = !tacticalOn;
+  updateToggleUI();
+  displayForCurrentToggle();
+});
+
+// Receive seat counts from iframe3 via parent relay.
+// withTactical / withoutTactical let this toggle flick instantly without a
+// round trip; tacticalEnabled syncs the toggle to whatever the calculator
+// last ran with, each time a fresh forecast arrives.
 window.addEventListener('message', e => {
   if (e.data && e.data.action === 'seatCounts' && e.data.counts) {
-    renderTiles(e.data.counts);
+    lastCounts = e.data.counts;
+    lastWith = e.data.withTactical || null;
+    lastWithout = e.data.withoutTactical || null;
+    tacticalOn = (typeof e.data.tacticalEnabled === 'boolean') ? e.data.tacticalEnabled : true;
+    updateToggleUI();
+    displayForCurrentToggle();
   }
 });
 
@@ -85,29 +129,6 @@ setTimeout(() => {
     document.getElementById('loading').textContent = 'Waiting for map to load…';
   }
 }, 12000);
-
-// Poll subtitle — fetch independently, non-blocking
-(async () => {
-  try {
-    const r = await fetch(POLL_CSV + '&_=' + Date.now());
-    if (!r.ok) return;
-    const text = await r.text();
-    const lines = text.trim().split('\n').filter(l=>l.trim());
-    const sep = lines[0].includes('\t') ? '\t' : ',';
-    const headers = lines[0].split(sep).map(h=>h.trim());
-    const gbRow = lines.slice(1).map(line => {
-      const vals = line.split(sep).map(v=>v.trim());
-      const o = {}; headers.forEach((h,i) => o[h] = vals[i]||'');
-      return o;
-    }).find(r => (r['region']||r['Region']||Object.values(r)[0]||'').trim().toLowerCase()==='gb-wide');
-    if (!gbRow) return;
-    const parts = ['ref','lab','con','ldem'].map(p => {
-      const v = parseFloat(gbRow[p+'_pct']||gbRow[p]||0)||0;
-      return `${LABELS[p]} ${v.toFixed(1)}%`;
-    }).join(' · ');
-    document.getElementById('sub').textContent = parts;
-  } catch(e) {}
-})();
 </script>
 </body>
 </html>
