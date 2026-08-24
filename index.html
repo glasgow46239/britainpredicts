@@ -29,6 +29,10 @@ window.addEventListener('message', function(e) {
     var mapFrame = document.getElementById('map-iframe');
     if (mapFrame) mapFrame.contentWindow.postMessage(e.data, '*');
   }
+  if (e.data && e.data.action === 'exportCSV') {
+    var mapFrameForExport = document.getElementById('map-iframe');
+    if (mapFrameForExport) mapFrameForExport.contentWindow.postMessage(e.data, '*');
+  }
   if (e.data && e.data.action === 'seatCounts') {
     var forecastFrame = document.getElementById('forecast-iframe');
     if (forecastFrame) forecastFrame.contentWindow.postMessage(e.data, '*');
