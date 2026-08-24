@@ -5,14 +5,15 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Britain Predicts — Constituency Map</title>
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Roboto',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0;}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0;}
 
 /* ── Control bar ── */
-#control-bar{display:flex;align-items:center;gap:12px;padding:8px 10px;background:#f0ede8;border-bottom:1px solid #ddd;flex-wrap:wrap;}
-@media(max-width:480px){#control-bar{gap:8px;}#view-controls{width:100%;}#search-wrap{max-width:100%;}}
+#control-bar{display:flex;flex-direction:column;gap:8px;padding:8px 10px;background:#f0ede8;border-bottom:1px solid #ddd;}
+#control-row1{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+#control-row2{display:flex;align-items:center;gap:8px;padding-left:2px;}
+@media(max-width:480px){#control-row1{gap:8px;}#view-controls{width:100%;}#search-wrap{max-width:100%;}}
 #search-wrap{flex:1;min-width:160px;max-width:320px;position:relative;}
 #search-input{width:100%;padding:7px 14px;border:1px solid #ddd;border-radius:6px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#222;}
 #search-input:focus{border-color:#aaa;box-shadow:0 0 0 2px rgba(0,0,0,.06);}
@@ -38,13 +39,22 @@ body{font-family:'Roboto',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0
 #party-select-wrap{display:none;align-items:center;gap:6px;}
 #party-select-wrap.visible{display:flex;}
 #party-select{border:1px solid #e0e0e0;border-radius:12px;padding:3px 8px;font-size:11px;font-family:inherit;background:#fff;color:#333;cursor:pointer;outline:none;}
-
-/* Live badge */
-#live-badge{margin-left:auto;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:12px;background:rgba(18,182,207,.15);color:#12B6CF;border:1px solid rgba(18,182,207,.4);display:none;}
+#flip-controls{display:flex;align-items:center;gap:6px;}
+#flip-controls.hidden{display:none;}
 
 /* ── Map container ── */
 #map-container{position:relative;width:100%;height:600px;}
 #map{position:absolute;top:0;left:0;bottom:0;width:calc(100% - 280px);transition:width .2s ease;}
+
+/* Flip legend */
+#flip-legend{position:absolute;left:10px;bottom:10px;z-index:15;background:rgba(255,255,255,.94);border:1px solid #ddd;border-radius:8px;padding:8px 10px;box-shadow:0 1px 5px rgba(0,0,0,.1);font-size:10px;color:#666;display:none;}
+#flip-legend.visible{display:block;}
+#flip-legend-title{font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#888;margin-bottom:6px;font-size:9px;}
+.fl-row{display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+.fl-row:last-child{margin-bottom:0;}
+.fl-swatch{width:16px;height:16px;border-radius:3px;background:#888;flex-shrink:0;}
+.fl-held{opacity:.35;border:1px solid #bbb;}
+.fl-flip{border:3px solid #111;}
 
 /* ── Side panel ── */
 #side-panel{position:absolute;top:0;right:0;width:280px;max-height:100%;background:#fff;border-left:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;display:flex;flex-direction:column;overflow:hidden;z-index:10;visibility:hidden;}
@@ -101,6 +111,11 @@ body{font-family:'Roboto',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0
 #legend-title{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:2px;}
 #legend-gradient{height:10px;border-radius:3px;width:100%;}
 #legend-labels{display:flex;justify-content:space-between;font-size:10px;color:#666;font-variant-numeric:tabular-nums;}
+#legend-bins{display:none;flex-direction:column;gap:4px;}
+#legend-bins.visible{display:flex;}
+#legend-bins-row{display:flex;gap:2px;}
+#legend-bins-row .bin{width:18px;height:10px;border-radius:2px;}
+#legend-bins-labels{display:flex;justify-content:space-between;font-size:9px;color:#666;}
 
 /* ── Mobile drawer ── */
 #drawer{position:absolute;bottom:0;left:0;right:0;z-index:20;background:#fff;border-top:1px solid #e5e5e5;transform:translateY(100%);transition:transform .3s ease;display:none;}
@@ -119,27 +134,33 @@ body{font-family:'Roboto',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0
 </head>
 <body>
 <div id="control-bar">
-  <div id="search-wrap">
-    <input id="search-input" type="search" placeholder="Search constituency…" autocomplete="off">
-    <div id="search-results" role="listbox"></div>
-  </div>
-  <div id="view-controls">
-    <span class="vc-label">View</span>
-    <div class="vc-seg">
-      <button class="vc-btn active" data-mode="winner">Winner</button>
-      <button class="vc-btn" data-mode="share">Share</button>
+  <div id="control-row1">
+    <div id="search-wrap">
+      <input id="search-input" type="search" placeholder="Search constituency…" autocomplete="off">
+      <div id="search-results" role="listbox"></div>
     </div>
+    <div id="view-controls">
+      <span class="vc-label">View</span>
+      <div class="vc-seg">
+        <button class="vc-btn active" data-mode="winner">Winner</button>
+        <button class="vc-btn" data-mode="share">Share</button>
+        <button class="vc-btn" data-mode="swing">Swing</button>
+      </div>
+    </div>
+  </div>
+  <div id="control-row2">
     <div id="party-select-wrap">
       <span class="vc-label">Party</span>
       <select id="party-select"></select>
     </div>
+    <div id="flip-controls">
+      <span class="vc-label">Flipped seats</span>
+      <div class="vc-seg">
+        <button class="vc-btn" data-flip="off">Off</button>
+        <button class="vc-btn active" data-flip="on">On</button>
+      </div>
+    </div>
   </div>
-  <span id="live-badge">&#9679; Live</span>
-  <button id="dl-btn" onclick="downloadCSV()" title="Download model output as CSV"
-    style="margin-left:8px;padding:4px 10px;background:#111;color:#fff;border:none;
-           border-radius:3px;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:.02em">
-    ↓ CSV
-  </button>
 </div>
 
 <div id="map-container">
@@ -169,6 +190,16 @@ body{font-family:'Roboto',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0
     <div id="legend-title">Vote share</div>
     <div id="legend-gradient"></div>
     <div id="legend-labels"><span>0%</span><span id="legend-max"></span></div>
+    <div id="legend-bins">
+      <div id="legend-bins-row"></div>
+      <div id="legend-bins-labels"><span>&minus;10pt</span><span>Flat</span><span>+10pt</span></div>
+    </div>
+  </div>
+
+  <div id="flip-legend">
+    <div id="flip-legend-title">Flipped seats</div>
+    <div class="fl-row"><div class="fl-swatch fl-held"></div><span>Held</span></div>
+    <div class="fl-row"><div class="fl-swatch fl-flip"></div><span>Flipped</span></div>
   </div>
 
   <div id="pin-indicator" role="button" title="Click to unpin">
@@ -596,8 +627,30 @@ function runModel() {
     counts[seat.winner] = (counts[seat.winner] || 0) + 1;
   });
 
+  // Also compute the OPPOSITE tactical-voting scenario, purely so iframe1's
+  // header can offer an instant "flick to compare" toggle without a round
+  // trip. This doesn't touch seat.winner/margin/shares above — those stay
+  // whatever the calculator actually asked for.
+  const savedEnabled = TACTICAL_ENABLED;
+  const altCounts = {};
+  try {
+    TACTICAL_ENABLED = !savedEnabled;
+    Object.values(DATA).forEach(seat => {
+      const r = optionC(seat);
+      altCounts[r.winner] = (altCounts[r.winner] || 0) + 1;
+    });
+  } finally {
+    TACTICAL_ENABLED = savedEnabled;
+  }
+
+  const withTactical    = savedEnabled ? counts : altCounts;
+  const withoutTactical = savedEnabled ? altCounts : counts;
+
   // Broadcast to parent — iframe1 and iframe2 both receive this
-  window.parent.postMessage({ action: 'seatCounts', counts }, '*');
+  window.parent.postMessage({
+    action: 'seatCounts', counts, withTactical, withoutTactical,
+    tacticalEnabled: savedEnabled,
+  }, '*');
 }
 
 // ============================================================
@@ -744,13 +797,16 @@ window.addEventListener('message', e => {
     if (typeof e.data.tacticalEnabled === 'boolean') TACTICAL_ENABLED = e.data.tacticalEnabled;
     if (typeof e.data.tacticalIntensity === 'number' && !isNaN(e.data.tacticalIntensity)) GLOBAL_INTENSITY = e.data.tacticalIntensity;
     runModel();
-    if (window._map && window._map.isStyleLoaded()) {
-      const expr = buildColorMatch();
-      window._map.setPaintProperty('cons-fill',  'fill-color', expr);
-      window._map.setPaintProperty('cons-hover', 'fill-color', expr);
+    // Re-render whatever view mode is currently active (Winner/Share/Swing),
+    // not just the winner colours — a stale map used to snap back to Winner
+    // colours on every re-run even if you had Share or Swing selected.
+    if (window._map && window._map.isStyleLoaded() && window._refreshView) {
+      window._refreshView();
     }
-    const badge = document.getElementById('live-badge');
-    if (badge) badge.style.display = '';
+  }
+
+  if (e.data.action === 'exportCSV') {
+    downloadCSV();
   }
 
   if (e.data.action === 'scrollToMap') {
@@ -835,6 +891,12 @@ function buildColorMatch(){
 
 function buildMapStyle(geojsonData){
   const colorMatch=buildColorMatch();
+  // Bake the default "Flipped seats: On" state straight into the initial
+  // style, same as colorMatch above — avoids a setPaintProperty call before
+  // the style has finished loading (see initChoropleth's applyFlips()).
+  const flipFillOpacity=buildFlipFillOpacityExpr();
+  const flipLineWidth=buildFlipLineWidthExpr();
+  const flipLineOpacity=buildFlipLineOpacityExpr();
   return{
     version:8,
     glyphs:'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
@@ -855,8 +917,8 @@ function buildMapStyle(geojsonData){
       {id:'railway',type:'line',source:'basemap','source-layer':'transportation',filter:['==',['get','class'],'rail'],paint:{'line-color':'hsl(34,12%,66%)','line-width':1,'line-opacity':0.7}},
       {id:'buildings',type:'fill',source:'basemap','source-layer':'building',minzoom:12,paint:{'fill-color':'rgba(185,176,169,1)','fill-opacity':0.9,'fill-outline-color':'rgba(165,156,148,1)'}},
       // Constituency fills
-      {id:'cons-fill',type:'fill',source:'cons',paint:{'fill-color':colorMatch,'fill-opacity':0.55}},
-      {id:'cons-line',type:'line',source:'cons',paint:{'line-color':'#000000','line-width':0.6,'line-opacity':0.4}},
+      {id:'cons-fill',type:'fill',source:'cons',paint:{'fill-color':colorMatch,'fill-opacity':flipFillOpacity}},
+      {id:'cons-line',type:'line',source:'cons',paint:{'line-color':'#000000','line-width':flipLineWidth,'line-opacity':flipLineOpacity}},
       // Hover overlay (brightens)
       {id:'cons-hover',type:'fill',source:'cons',paint:{'fill-color':colorMatch,'fill-opacity':['case',['boolean',['feature-state','hover'],false],0.3,0]}},
       // Pinned outline
@@ -975,45 +1037,143 @@ function buildChoroplethExpr(partyKey,ceiling){
   return['interpolate',['linear'],matchExpr,0,'rgba(245,245,245,1)',ceiling,'rgba('+r+','+g+','+b+',1)'];
 }
 
+// Party swing since 2024 — how a SINGLE party's own vote share has moved in
+// each seat, independent of who wins it. Discrete bins (not a gradient):
+// deciding whether a seat is "up" or "down" for a party matters more than
+// reading an exact number off a continuous ramp.
+const SWING_BINS = [
+  {max:-10, color:'#7A1315'},
+  {max:-5,  color:'#DC2626'},
+  {max:-1,  color:'#F1A9A6'},
+  {max:1,   color:'#e5e5e5'},
+  {max:5,   color:'#A8D8BC'},
+  {max:10,  color:'#059669'},
+  {max:Infinity, color:'#046350'},
+];
+function swingBinColor(pts){for(const b of SWING_BINS){if(pts<b.max)return b.color;}return SWING_BINS[SWING_BINS.length-1].color;}
+
+function buildSwingExpr(partyKey){
+  const matchExpr=['match',['get','PCON24CD']];
+  Object.entries(DATA).forEach(([code,d])=>{
+    const pts=((d.shares[partyKey]||0)-(d.votes[partyKey]||0))*100;
+    matchExpr.push(code,swingBinColor(pts));
+  });
+  matchExpr.push('#e5e5e5');
+  return matchExpr;
+}
+
+// Flipped-seat highlighting (Winner view only) — flipped seats render at
+// full opacity with a bold dark border; held seats mute back so the flips
+// read at a glance. Built the same way buildColorMatch() is: a per-code
+// match expression, no feature-state needed.
+function buildFlipFillOpacityExpr(){
+  const e=['match',['get','PCON24CD']];
+  Object.entries(DATA).forEach(([code,d])=>{e.push(code,d.winner!==d.defender?0.55:0.18);});
+  e.push(0.55);
+  return e;
+}
+function buildFlipLineWidthExpr(){
+  const e=['match',['get','PCON24CD']];
+  Object.entries(DATA).forEach(([code,d])=>{e.push(code,d.winner!==d.defender?2.5:0.6);});
+  e.push(0.6);
+  return e;
+}
+function buildFlipLineOpacityExpr(){
+  const e=['match',['get','PCON24CD']];
+  Object.entries(DATA).forEach(([code,d])=>{e.push(code,d.winner!==d.defender?0.9:0.4);});
+  e.push(0.4);
+  return e;
+}
+
 function initChoropleth(map){
   const modeBtns=document.querySelectorAll('.vc-btn[data-mode]');
+  const flipBtns=document.querySelectorAll('.vc-btn[data-flip]');
   const partyWrap=document.getElementById('party-select-wrap');
+  const flipWrap=document.getElementById('flip-controls');
   const partySelect=document.getElementById('party-select');
   const legend=document.getElementById('choropleth-legend');
   const legendGrad=document.getElementById('legend-gradient');
   const legendMax=document.getElementById('legend-max');
   const legendTitle=document.getElementById('legend-title');
-  let currentMode='winner',currentParty='lab';
+  const legendBins=document.getElementById('legend-bins');
+  const legendBinsRow=document.getElementById('legend-bins-row');
+  const flipLegend=document.getElementById('flip-legend');
+  let currentMode='winner',currentParty='lab',flipsOn=true;
 
   Object.entries(PARTIES).forEach(([key,p])=>{const opt=document.createElement('option');opt.value=key;opt.textContent=p.label;partySelect.appendChild(opt);});
   partySelect.value=currentParty;
 
+  SWING_BINS.forEach(b=>{const sw=document.createElement('div');sw.className='bin';sw.style.background=b.color;legendBinsRow.appendChild(sw);});
+
   function getWinnerExpr(){const e=['match',['get','PCON24CD']];Object.entries(DATA).forEach(([code,d])=>{e.push(code,PARTIES[d.winner]?.color||'#cccccc');});NI_CODES.forEach(c=>e.push(c,'#c8c5be'));e.push('#cccccc');return e;}
+
+  function applyFlips(){
+    // Only meaningful in Winner view — Share/Swing already use fill colour
+    // and opacity to carry their own signal.
+    if(currentMode==='winner'&&flipsOn){
+      map.setPaintProperty('cons-fill','fill-opacity',buildFlipFillOpacityExpr());
+      map.setPaintProperty('cons-line','line-width',buildFlipLineWidthExpr());
+      map.setPaintProperty('cons-line','line-opacity',buildFlipLineOpacityExpr());
+      flipLegend.classList.add('visible');
+    }else{
+      if(currentMode==='winner')map.setPaintProperty('cons-fill','fill-opacity',0.55);
+      map.setPaintProperty('cons-line','line-width',0.6);
+      map.setPaintProperty('cons-line','line-opacity',0.4);
+      flipLegend.classList.remove('visible');
+    }
+  }
 
   function applyMode(mode,party){
     currentMode=mode;currentParty=party;
+    flipWrap.classList.toggle('hidden',mode!=='winner');
     if(mode==='winner'){
       map.setPaintProperty('cons-fill','fill-color',getWinnerExpr());
-      map.setPaintProperty('cons-fill','fill-opacity',0.55);
       map.setPaintProperty('cons-hover','fill-color',getWinnerExpr());
-      partyWrap.classList.remove('visible');legend.classList.remove('visible');
-    }else{
+      partyWrap.classList.remove('visible');
+      legend.classList.remove('visible');legendGrad.style.display='';legendBins.classList.remove('visible');
+      applyFlips();
+    }else if(mode==='share'){
       const ceiling=CHOROPLETH_CEILINGS[party]||50;
       const expr=buildChoroplethExpr(party,ceiling);
       map.setPaintProperty('cons-fill','fill-color',expr);
       map.setPaintProperty('cons-fill','fill-opacity',0.85);
       map.setPaintProperty('cons-hover','fill-color',expr);
+      map.setPaintProperty('cons-line','line-width',0.6);
+      map.setPaintProperty('cons-line','line-opacity',0.4);
       partyWrap.classList.add('visible');
+      flipLegend.classList.remove('visible');
       const p=PARTIES[party];
       legendTitle.textContent=p.label+' vote share';
-      legendGrad.style.background='linear-gradient(to right,#f5f5f5,'+p.color+')';
+      legendGrad.style.display='';legendGrad.style.background='linear-gradient(to right,#f5f5f5,'+p.color+')';
       legendMax.textContent=ceiling+'%+';
-      legend.classList.add('visible');
+      legend.classList.add('visible');legendBins.classList.remove('visible');
+    }else{ // swing
+      const expr=buildSwingExpr(party);
+      map.setPaintProperty('cons-fill','fill-color',expr);
+      map.setPaintProperty('cons-fill','fill-opacity',0.85);
+      map.setPaintProperty('cons-hover','fill-color',expr);
+      map.setPaintProperty('cons-line','line-width',0.6);
+      map.setPaintProperty('cons-line','line-opacity',0.4);
+      partyWrap.classList.add('visible');
+      flipLegend.classList.remove('visible');
+      const p=PARTIES[party];
+      legendTitle.textContent=p.label+' vote share vs. 2024';
+      legendGrad.style.display='none';
+      legend.classList.add('visible');legendBins.classList.add('visible');
     }
   }
 
   modeBtns.forEach(btn=>{btn.addEventListener('click',()=>{modeBtns.forEach(b=>b.classList.remove('active'));btn.classList.add('active');applyMode(btn.dataset.mode,currentParty);});});
+  flipBtns.forEach(btn=>{btn.addEventListener('click',()=>{flipBtns.forEach(b=>b.classList.remove('active'));btn.classList.add('active');flipsOn=btn.dataset.flip==='on';applyFlips();});});
   partySelect.addEventListener('change',()=>applyMode(currentMode,partySelect.value));
+
+  // Re-apply whatever's currently active after a model re-run (forecastUpdate).
+  window._refreshView=()=>applyMode(currentMode,currentParty);
+
+  // The initial paint already has flips baked in (see buildMapStyle) — this
+  // just syncs the legend's visibility to match, which is safe to touch
+  // immediately since it's a DOM class, not a map paint property.
+  flipLegend.classList.add('visible');
 }
 
 // ============================================================
