@@ -5,52 +5,66 @@
 <title>Britain Predicts — Calculator</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:Arial,sans-serif; background:#fff; font-size:13px; }
+html { font-size:16px; }
+body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff; font-size:1rem; }
 #loading { padding:24px; color:#999; text-align:center; }
 #error   { padding:16px; color:#c00; font-size:12px; display:none; }
 #wrap    { display:none; }
-#header  { padding:10px 16px 8px; border-bottom:2px solid #111; }
-#header h2 { font-size:13px; font-weight:700; color:#111; }
-#header p  { font-size:10px; color:#888; margin-top:2px; }
-#tabs { display:flex; border-bottom:1px solid #ddd; padding:0 16px; margin-top:8px; }
-.tab { padding:7px 14px 6px; font-size:11px; font-weight:700; color:#999;
-       border-bottom:2px solid transparent; cursor:pointer; margin-bottom:-1px; }
-.tab.active { color:#111; border-bottom-color:#111; }
-.panel { display:none; padding:12px 16px 8px; }
+
+#header  { padding:0.875rem 1.25rem 0.625rem; border-bottom:1px solid #f0f0f0; }
+#header h2 { font-size:1.125rem; font-weight:700; color:#111; }
+#header p  { font-size:0.875rem; color:#888; margin-top:0.1875rem; }
+
+.pill    { display:inline-flex; border:1px solid #e0e0e0; border-radius:12px; overflow:hidden; }
+.pill-btn{ padding:0.625rem 1.125rem; font-size:1rem; font-weight:700; font-family:inherit; border:none; background:transparent; cursor:pointer; }
+
+.panel   { display:none; padding:1rem 1.25rem 0.25rem; }
 .panel.active { display:block; }
-.grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:10px; }
-.grid8 { display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin-bottom:10px; }
-@media(min-width:500px){ .grid4 { grid-template-columns:repeat(8,1fr); } }
-.ic { display:flex; flex-direction:column; align-items:center; gap:3px; }
-.il { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
-.if { width:100%; border:1.5px solid #ddd; border-radius:3px; text-align:center;
-      font-size:13px; font-weight:700; padding:5px 2px; outline:none; }
-.if:focus { border-color:#111; }
-.rblock { margin-bottom:14px; }
-.rname  { font-size:10px; font-weight:700; color:#555; text-transform:uppercase;
-          letter-spacing:.05em; margin-bottom:6px; }
-.ctrl   { display:flex; align-items:center; gap:8px; padding:4px 0 4px; flex-wrap:wrap; }
-.tlbl   { font-size:11px; color:#888; }
-.tval   { font-size:11px; font-weight:700; }
-.cbtn   { padding:4px 10px; border:1px solid #ddd; border-radius:3px;
-          font-size:10px; font-weight:700; cursor:pointer; background:#fff; color:#555; }
-.cbtn:hover { background:#f5f5f5; }
-#run-wrap { padding:4px 16px 10px; }
-#run-btn  { width:100%; padding:10px; background:#111; color:#fff; border:none;
-            border-radius:4px; font-size:13px; font-weight:700; cursor:pointer; }
-#run-btn:hover { background:#333; }
-#results  { padding:0 16px 12px; display:none; }
-#rlbl     { font-size:10px; font-weight:700; color:#666; text-transform:uppercase;
-            letter-spacing:.05em; margin-bottom:8px; }
-#rgrid    { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+
+.grid8   { display:grid; grid-template-columns:repeat(4,1fr); gap:0.625rem; }
+@media(min-width:500px){ .grid8 { grid-template-columns:repeat(8,1fr); } }
+.ic      { display:flex; flex-direction:column; align-items:center; gap:0.375rem; }
+.il      { min-height:2.4rem; display:flex; flex-direction:column; justify-content:flex-start; align-items:center; font-size:0.8125rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; text-align:center; }
+.il-sub  { font-size:0.625rem; font-weight:500; color:#aaa; text-transform:none; letter-spacing:0; margin-top:0.125rem; }
+.if      { width:100%; border:1.5px solid #ddd; border-radius:8px; text-align:center; font-size:1rem; font-weight:700; padding:0.625rem 0.125rem; outline:none; font-family:inherit; color:#111; }
+.if:focus{ border-color:#111; box-shadow:0 0 0 2px rgba(0,0,0,.06); }
+.if-region{ border-color:#e5c9e2; background:#fbf5fa; }
+
+.ctrl    { display:flex; align-items:center; justify-content:space-between; padding:0.625rem 0.125rem 0.25rem; flex-wrap:wrap; gap:0.5rem; }
+.ctrl-l  { display:flex; gap:0.5rem; }
+.tlbl    { font-size:0.8125rem; color:#999; }
+.tval    { font-size:0.8125rem; font-weight:700; }
+.cbtn    { padding:0.5rem 1rem; border:1px solid #e0e0e0; border-radius:12px; font-size:0.8125rem; font-weight:700; cursor:pointer; background:#fff; color:#555; font-family:inherit; }
+.cbtn:hover{ background:#f5f5f5; }
+
+.region-row    { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.875rem; }
+.region-select { border:1px solid #e0e0e0; border-radius:12px; padding:0.5rem 0.75rem; font-size:0.9375rem; font-family:inherit; background:#fff; color:#333; cursor:pointer; outline:none; }
+
+#tactical-wrap  { padding:0.875rem 1.25rem 0.625rem; }
+.tactical-row   { display:flex; align-items:center; justify-content:space-between; gap:0.625rem; padding:0.625rem 0.875rem; border-radius:8px; background:#f5f5f5; }
+.tactical-label { font-size:1rem; font-weight:600; color:#333; }
+.toggle-tap     { display:flex; align-items:center; gap:0.5rem; cursor:pointer; flex-shrink:0; padding:0.6875rem 0.25rem; margin:-0.6875rem -0.25rem; }
+.toggle         { width:2.375rem; height:1.375rem; border-radius:0.6875rem; position:relative; transition:background .15s; flex-shrink:0; }
+.toggle-knob    { position:absolute; top:2px; width:1.125rem; height:1.125rem; border-radius:50%; background:#fff; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.25); }
+
+#run-wrap{ padding:0 1.25rem 0.875rem; }
+#run-btn { width:100%; padding:0.875rem; background:#111; color:#fff; border:none; border-radius:8px; font-size:1.0625rem; font-weight:700; cursor:pointer; font-family:inherit; }
+#run-btn:hover{ background:#333; }
+
+#results { padding:0 1.25rem 1rem; display:none; }
+#results-head{ display:flex; align-items:center; justify-content:space-between; gap:0.5rem; margin-bottom:0.5rem; }
+#rlbl    { font-size:0.75rem; font-weight:700; color:#666; text-transform:uppercase; letter-spacing:.05em; }
+.export-btn{ padding:0.4375rem 0.75rem; border:1px solid #e0e0e0; border-radius:12px; font-size:0.75rem; font-weight:700; cursor:pointer; background:#fff; color:#555; font-family:inherit; white-space:nowrap; }
+.export-btn:hover{ background:#f5f5f5; }
+#rgrid   { display:grid; grid-template-columns:repeat(4,1fr); gap:0.625rem; }
 @media(min-width:500px){ #rgrid { grid-template-columns:repeat(8,1fr); } }
-.rc  { display:flex; flex-direction:column; align-items:center; gap:3px; }
-.rp  { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
-.rs  { font-size:22px; font-weight:700; line-height:1; }
-.rch { font-size:10px; }
-.rbg { width:100%; height:3px; background:#eee; border-radius:2px; }
-.rb  { height:100%; border-radius:2px; }
-#status { font-size:9px; color:#ccc; text-align:right; padding:2px 16px 8px; }
+.rc      { display:flex; flex-direction:column; align-items:flex-end; padding:0.875rem 0.875rem 0.75rem; border-radius:0; color:#fff; }
+.r-num   { font-size:3.5rem; font-weight:700; line-height:1; font-variant-numeric:tabular-nums; text-align:right; }
+.r-chg   { font-size:2rem; font-weight:500; margin-top:0.25rem; font-variant-numeric:tabular-nums; color:rgba(255,255,255,.82); text-align:right; }
+.r-rule  { height:2px; margin:0.5rem 0; background:rgba(0,0,0,.25); align-self:stretch; }
+.r-label { font-size:2rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; text-align:right; }
+
+#status  { font-size:0.75rem; color:#ccc; text-align:right; padding:0 1.25rem 0.625rem; }
 </style>
 </head>
 <body>
@@ -58,40 +72,81 @@ body { font-family:Arial,sans-serif; background:#fff; font-size:13px; }
 <div id="error"></div>
 <div id="wrap">
   <div id="header">
-    <h2>Britain Predicts — Create Your Forecast</h2>
-    <p>Adjust poll shares then run — changes update the map</p>
+    <h2>Create Your Forecast</h2>
+    <p>Adjust poll shares then run &mdash; changes update the map</p>
   </div>
-  <div id="tabs">
-    <div class="tab active" onclick="showTab('gb')">GB-wide</div>
-    <div class="tab"        onclick="showTab('reg')">By region</div>
+
+  <div style="padding:0.875rem 1.25rem 0;">
+    <div class="pill">
+      <button class="pill-btn" id="tab-gb"  onclick="showTab('gb')">GB-wide</button>
+      <button class="pill-btn" id="tab-reg" onclick="showTab('reg')">By region</button>
+    </div>
   </div>
-  <div id="panel-gb"  class="panel active"><div id="gb-grid"  class="grid4"></div><div id="gb-ctrl" class="ctrl"></div></div>
-  <div id="panel-reg" class="panel"><div id="reg-panels"></div></div>
-  <div id="tactical-wrap" style="padding:0 16px 8px;display:flex;align-items:center;gap:10px;font-size:11px;color:#555;flex-wrap:wrap;">
-    <label style="display:flex;align-items:center;gap:5px;cursor:pointer;">
-      <input type="checkbox" id="tactical-toggle" checked style="cursor:pointer;">
-      Tactical voting
-    </label>
-    <span style="flex:1;min-width:8px"></span>
-    <span class="tlbl">Intensity</span>
-    <input type="range" id="tactical-intensity" min="0" max="2" step="0.1" value="1" style="width:100px;vertical-align:middle;">
-    <span class="tval" id="tactical-intensity-val">1.0×</span>
+
+  <div id="panel-gb" class="panel active">
+    <div id="gb-grid" class="grid8"></div>
+    <div class="ctrl">
+      <div class="ctrl-l">
+        <button class="cbtn" onclick="normaliseGB()">Reset to poll</button>
+        <button class="cbtn" onclick="evenSplitGB()">Even split</button>
+      </div>
+      <div class="tlbl" style="text-align:right;">Con&ndash;Ind total: <span class="tval" id="tot-gb" style="color:#059669">&mdash;</span><br>SNP &amp; PC use their own regional base</div>
+    </div>
   </div>
-  <div id="run-wrap"><button id="run-btn" onclick="run()">Run forecast ›</button></div>
-  <div id="results"><div id="rlbl">Projected seats</div><div id="rgrid"></div></div>
+
+  <div id="panel-reg" class="panel">
+    <div class="region-row">
+      <span class="tlbl" style="text-transform:uppercase;letter-spacing:.05em;">Region</span>
+      <select class="region-select" id="region-select"></select>
+    </div>
+    <div id="reg-grid" class="grid8"></div>
+    <div class="ctrl">
+      <div class="ctrl-l">
+        <button class="cbtn" onclick="resetReg()">Reset to poll</button>
+        <button class="cbtn" onclick="evenSplitReg()">Even split</button>
+      </div>
+      <div class="tlbl">Total: <span class="tval" id="tot-reg">&mdash;</span></div>
+    </div>
+  </div>
+
+  <div id="tactical-wrap">
+    <div class="tactical-row">
+      <span class="tactical-label">Tactical voting</span>
+      <div class="toggle-tap" id="tactical-hit">
+        <div class="toggle" id="toggle-track">
+          <div class="toggle-knob" id="toggle-knob"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="run-wrap"><button id="run-btn" onclick="run()">Run forecast &rsaquo;</button></div>
+
+  <div id="results">
+    <div id="results-head">
+      <div id="rlbl">Projected seats</div>
+      <button class="export-btn" onclick="exportCSV()">&darr; Export CSV</button>
+    </div>
+    <div id="rgrid"></div>
+  </div>
   <div id="status"></div>
 </div>
 <script>
 const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=';
 const POLL_CSV = BASE_URL + '0&single=true&output=csv';
 
-const PARTIES = ['con','lab','ldem','grn','snp','pc','ref','oth'];
-const REGIONS = ['Scotland','Wales','Northern England','Southern England','Midlands','London'];
-const LABELS  = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Reform',oth:'Other'};
-const COLOURS = {con:'#0087DC',lab:'#E4003B',ldem:'#FAA61A',grn:'#02A95B',snp:'#C8A400',pc:'#3F8428',ref:'#12B6CF',oth:'#57534e'};
-const S24     = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
+const PARTIES = ['con','lab','ldem','grn','ref','oth','snp','pc']; // snp/pc last — matches the approved card order, and keeps their regional-base inputs visually set apart from the 6 main GB-wide parties
+const GB_MAIN_PARTIES = ['con','lab','ldem','grn','ref','oth']; // snp/pc use their own regional base on the GB-wide tab
+const REGIONS  = ['Scotland','Wales','Northern England','Southern England','Midlands','London'];
+const LABELS   = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Ref',oth:'Ind'};
+const COLOURS  = {con:'#05718F',lab:'#D34C4C',ldem:'#EBB82F',grn:'#5CBC4A',snp:'#EEE03C',pc:'#469366',ref:'#15B6C2',oth:'#CCA7C6'};
+const ALPHA    = {con:.12,lab:.12,ldem:.40,grn:.25,snp:.48,pc:.12,ref:.20,oth:.40};
+const S24      = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
 
 let livePollMap = {};
+let regionEdits = {};      // region -> {party: value}, in-memory so switching the region select preserves edits
+let currentRegion = REGIONS[0];
+let tacticalOn = true;
 
 function parseCSV(text) {
   const lines = text.trim().split('\n').filter(l=>l.trim());
@@ -120,148 +175,205 @@ function buildPollMap(rows) {
   return map;
 }
 
+async function fetchWithRetry(url, retries=3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const r = await fetch(url + (url.includes('?') ? '&' : '?') + '_=' + Date.now());
+      if (r.ok) return r;
+      if (i === retries-1) throw new Error('HTTP ' + r.status);
+    } catch(e) {
+      if (i === retries-1) throw e;
+      await new Promise(res => setTimeout(res, 800*(i+1)));
+    }
+  }
+}
+
 function showTab(tab) {
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active',['gb','reg'][i]===tab));
+  document.getElementById('tab-gb').classList.toggle('active', tab==='gb');
+  document.getElementById('tab-reg').classList.toggle('active', tab==='reg');
+  document.getElementById('tab-gb').style.background  = tab==='gb'  ? '#222' : 'transparent';
+  document.getElementById('tab-gb').style.color       = tab==='gb'  ? '#fff' : '#555';
+  document.getElementById('tab-reg').style.background = tab==='reg' ? '#222' : 'transparent';
+  document.getElementById('tab-reg').style.color      = tab==='reg' ? '#fff' : '#555';
   document.getElementById('panel-gb').classList.toggle('active', tab==='gb');
   document.getElementById('panel-reg').classList.toggle('active', tab==='reg');
 }
 
 function val(id) { return parseFloat(document.getElementById(id)?.value||0)||0; }
-function setVal(id, v) { const el=document.getElementById(id); if(el) el.value=v.toFixed(1); }
+function setVal(id, v) { const el=document.getElementById(id); if(el) el.value=(+v).toFixed(1); }
 
-function updateTotal(prefix) {
-  let t=0; PARTIES.forEach(p=>{t+=val(prefix+p);}); 
-  const el=document.getElementById('tot-'+prefix);
-  if(el){el.textContent=t.toFixed(1)+'%'; el.style.color=Math.abs(t-100)<0.5?'#02A95B':'#E4003B';}
+function updateTotalGB() {
+  let t=0; GB_MAIN_PARTIES.forEach(p=>{t+=val('gb_'+p);});
+  const el=document.getElementById('tot-gb');
+  if(el){ el.textContent=t.toFixed(1)+'%'; el.style.color=Math.abs(t-100)<0.5?'#059669':'#DC2626'; }
 }
 
-function buildGBInputs(gbPoll) {
+function updateTotalReg() {
+  let t=0; PARTIES.forEach(p=>{t+=val('reg_'+p);});
+  const el=document.getElementById('tot-reg');
+  if(el){ el.textContent=t.toFixed(1)+'%'; el.style.color=Math.abs(t-100)<0.5?'#059669':'#DC2626'; }
+}
+
+// ── GB-wide tab ──────────────────────────────────────────────────────────
+function buildGBInputs() {
+  const liveGB = livePollMap['GB-wide']||{};
+  const liveScotland = livePollMap['Scotland']||{};
+  const liveWales = livePollMap['Wales']||{};
   const grid = document.getElementById('gb-grid');
   grid.innerHTML = '';
   PARTIES.forEach(p => {
+    const isRegional = p==='snp' || p==='pc';
+    const sub = p==='snp' ? '<div class="il-sub">within Scotland</div>' : p==='pc' ? '<div class="il-sub">within Wales</div>' : '';
+    const initVal = p==='snp' ? (liveScotland.snp||0) : p==='pc' ? (liveWales.pc||0) : (liveGB[p]||0);
     const col = document.createElement('div'); col.className='ic';
-    col.innerHTML=`<div class="il" style="color:${COLOURS[p]}">${LABELS[p]}</div>
-      <input class="if" id="gb_${p}" type="number" step="0.1" min="0" max="70"
-        value="${(gbPoll[p]||0).toFixed(1)}" style="color:${COLOURS[p]};border-color:${COLOURS[p]}44"
+    col.innerHTML = `<div class="il" style="color:${COLOURS[p]}">${LABELS[p]}${sub}</div>
+      <input class="if${isRegional?' if-region':''}" id="gb_${p}" type="number" step="0.1" min="0" max="70"
+        value="${initVal.toFixed(1)}" style="color:${COLOURS[p]};border-color:${COLOURS[p]}44"
         oninput="onGBChange()">`;
     grid.appendChild(col);
   });
-  document.getElementById('gb-ctrl').innerHTML=`
-    <span class="tlbl">Total:</span><span class="tval" id="tot-gb_">—</span>
-    <span style="flex:1"></span>
-    <button class="cbtn" onclick="normalise('gb_')">Normalise</button>
-    <button class="cbtn" onclick="resetGB()">Reset</button>`;
-  updateTotal('gb_');
+  updateTotalGB();
 }
 
 function onGBChange() {
-  updateTotal('gb_');
-  // Propagate GB delta to regional inputs
-  const liveGB = livePollMap['GB-wide'] || {};
+  updateTotalGB();
+  const liveGB = livePollMap['GB-wide']||{};
   REGIONS.forEach(region => {
     if (!livePollMap[region]) return;
-    PARTIES.forEach(p => {
+    const edits = regionEdits[region] || (regionEdits[region] = Object.assign({}, livePollMap[region]));
+    GB_MAIN_PARTIES.forEach(p => {
       const delta = val('gb_'+p) - (liveGB[p]||0);
-      setVal('reg_'+region+'_'+p, Math.max(0,(livePollMap[region][p]||0)+delta));
+      edits[p] = Math.max(0, (livePollMap[region][p]||0) + delta);
     });
-    updateTotal('reg_'+region+'_');
+    if (region === 'Scotland') edits.snp = Math.max(0, val('gb_snp'));
+    if (region === 'Wales')    edits.pc  = Math.max(0, val('gb_pc'));
+    if (region === currentRegion) loadRegionIntoInputs(region);
   });
 }
 
-function normalise(prefix) {
-  let t=0; PARTIES.forEach(p=>{t+=val(prefix+p);});
-  if(t<=0) return;
-  PARTIES.forEach(p=>{setVal(prefix+p,(val(prefix+p)/t*100));});
-  updateTotal(prefix);
-  if(prefix==='gb_') onGBChange();
+function normaliseGB() {
+  const liveGB = livePollMap['GB-wide']||{};
+  const liveScotland = livePollMap['Scotland']||{};
+  const liveWales = livePollMap['Wales']||{};
+  PARTIES.forEach(p => {
+    const v = p==='snp' ? (liveScotland.snp||0) : p==='pc' ? (liveWales.pc||0) : (liveGB[p]||0);
+    setVal('gb_'+p, v);
+  });
+  regionEdits = {}; // drop all regional edits — everything reverts to live polling
+  updateTotalGB();
+  loadRegionIntoInputs(currentRegion);
 }
 
-function resetGB() {
-  const gb=livePollMap['GB-wide']||{};
-  PARTIES.forEach(p=>{setVal('gb_'+p,gb[p]||0);});
-  updateTotal('gb_');
-  REGIONS.forEach(region=>{
-    if(!livePollMap[region]) return;
-    PARTIES.forEach(p=>{setVal('reg_'+region+'_'+p,livePollMap[region][p]||0);});
-    updateTotal('reg_'+region+'_');
+function evenSplitGB() {
+  const share = (100/GB_MAIN_PARTIES.length);
+  GB_MAIN_PARTIES.forEach(p => setVal('gb_'+p, share));
+  onGBChange();
+}
+
+// ── By-region tab ────────────────────────────────────────────────────────
+function buildRegionSelect() {
+  const sel = document.getElementById('region-select');
+  sel.innerHTML = '';
+  REGIONS.forEach(region => {
+    const opt = document.createElement('option');
+    opt.value = region; opt.textContent = region;
+    sel.appendChild(opt);
+  });
+  sel.value = currentRegion;
+  sel.addEventListener('change', () => {
+    currentRegion = sel.value;
+    loadRegionIntoInputs(currentRegion);
   });
 }
 
-function buildRegInputs(pollMap) {
-  const container=document.getElementById('reg-panels');
-  container.innerHTML='';
-  REGIONS.forEach(region=>{
-    const rp=pollMap[region]||pollMap['GB-wide']||{};
-    let inputs='';
-    PARTIES.forEach(p=>{inputs+=`<div class="ic">
-      <div class="il" style="color:${COLOURS[p]}">${LABELS[p]}</div>
-      <input class="if" id="reg_${region}_${p}" type="number" step="0.1" min="0" max="70"
-        value="${(rp[p]||0).toFixed(1)}" style="color:${COLOURS[p]};border-color:${COLOURS[p]}44"
-        oninput="updateTotal('reg_${region}_')">
-    </div>`;});
-    const block=document.createElement('div'); block.className='rblock';
-    block.innerHTML=`<div class="rname">${region}</div>
-      <div class="grid4">${inputs}</div>
-      <div class="ctrl">
-        <span class="tlbl">Total:</span><span class="tval" id="tot-reg_${region}_">—</span>
-        <span style="flex:1"></span>
-        <button class="cbtn" onclick="normalise('reg_${region}_')">Normalise</button>
-        <button class="cbtn" onclick="resetReg('${region}')">Reset</button>
-      </div>`;
-    container.appendChild(block);
-    updateTotal('reg_'+region+'_');
+function buildRegionInputs() {
+  const grid = document.getElementById('reg-grid');
+  grid.innerHTML = '';
+  PARTIES.forEach(p => {
+    const col = document.createElement('div'); col.className='ic';
+    col.innerHTML = `<div class="il" style="color:${COLOURS[p]}">${LABELS[p]}</div>
+      <input class="if" id="reg_${p}" type="number" step="0.1" min="0" max="70"
+        value="0.0" style="color:${COLOURS[p]};border-color:${COLOURS[p]}44"
+        oninput="onRegionInputChange()">`;
+    grid.appendChild(col);
   });
+  loadRegionIntoInputs(currentRegion);
 }
 
-function resetReg(region) {
-  const rp=livePollMap[region]||livePollMap['GB-wide']||{};
-  PARTIES.forEach(p=>{setVal('reg_'+region+'_'+p,rp[p]||0);});
-  updateTotal('reg_'+region+'_');
+function loadRegionIntoInputs(region) {
+  const src = regionEdits[region] || livePollMap[region] || livePollMap['GB-wide'] || {};
+  PARTIES.forEach(p => setVal('reg_'+p, src[p]||0));
+  updateTotalReg();
 }
 
+function onRegionInputChange() {
+  const edits = regionEdits[currentRegion] || (regionEdits[currentRegion] = {});
+  PARTIES.forEach(p => { edits[p] = val('reg_'+p); });
+  updateTotalReg();
+  syncGBFromRegion();
+}
+
+function syncGBFromRegion() {
+  // Scotland's SNP % and Wales's PC % are the same number shown on the
+  // GB-wide tab — keep that field in sync whenever the region tab changes it.
+  if (currentRegion === 'Scotland') setVal('gb_snp', regionEdits.Scotland?.snp ?? val('reg_snp'));
+  if (currentRegion === 'Wales')    setVal('gb_pc',  regionEdits.Wales?.pc ?? val('reg_pc'));
+}
+
+function resetReg() {
+  const rp = livePollMap[currentRegion] || livePollMap['GB-wide'] || {};
+  regionEdits[currentRegion] = Object.assign({}, rp);
+  loadRegionIntoInputs(currentRegion);
+  syncGBFromRegion();
+}
+
+function evenSplitReg() {
+  const share = (100/PARTIES.length);
+  const edits = regionEdits[currentRegion] || (regionEdits[currentRegion] = {});
+  PARTIES.forEach(p => { edits[p] = share; });
+  loadRegionIntoInputs(currentRegion);
+  syncGBFromRegion();
+}
+
+// ── Build the poll map sent to iframe3 ──────────────────────────────────
 function buildUserPollMap() {
-  const activeTab=document.querySelector('.tab.active')?.textContent?.trim();
-  const map={};
-  if(activeTab==='GB-wide'){
-    const liveGB=livePollMap['GB-wide']||{};
-    map['GB-wide']={};
-    PARTIES.forEach(p=>{map['GB-wide'][p]=val('gb_'+p);});
-    REGIONS.forEach(region=>{
-      const liveReg=livePollMap[region]||liveGB;
-      map[region]={};
-      PARTIES.forEach(p=>{
-        map[region][p]=Math.max(0,(liveReg[p]||0)+(val('gb_'+p)-(liveGB[p]||0)));
-      });
-    });
-  } else {
-    map['GB-wide']={};
-    PARTIES.forEach(p=>{map['GB-wide'][p]=val('gb_'+p);});
-    REGIONS.forEach(region=>{
-      map[region]={};
-      PARTIES.forEach(p=>{map[region][p]=val('reg_'+region+'_'+p);});
-    });
-  }
+  const liveGB = livePollMap['GB-wide']||{};
+  const map = { 'GB-wide': Object.assign({}, liveGB) }; // not used by the seat model — every region has its own entry
+  REGIONS.forEach(region => {
+    const edits = regionEdits[region];
+    const live = livePollMap[region] || liveGB;
+    map[region] = {};
+    PARTIES.forEach(p => { map[region][p] = (edits && edits[p] != null) ? edits[p] : (live[p]||0); });
+  });
   return map;
 }
 
-function run() {
-  const pollMap=buildUserPollMap();
-  const tacticalEnabled=document.getElementById('tactical-toggle')?.checked ?? true;
-  const intensityRaw=document.getElementById('tactical-intensity')?.value;
-  const intensityParsed=parseFloat(intensityRaw);
-  const tacticalIntensity=(intensityRaw!=null && !isNaN(intensityParsed)) ? intensityParsed : 1;
-  // Send to iframe3 via parent — iframe3 runs model and broadcasts results
-  window.parent.postMessage({action:'forecastUpdate', pollMap, tacticalEnabled, tacticalIntensity}, '*');
-  document.getElementById('results').style.display='block';
-  document.getElementById('rgrid').innerHTML='<div style="padding:8px;color:#999;font-size:11px">Updating map…</div>';
+// ── Tactical toggle ──────────────────────────────────────────────────────
+function updateToggleUI() {
+  document.getElementById('toggle-track').style.background = tacticalOn ? '#111' : '#ddd';
+  document.getElementById('toggle-knob').style.left = tacticalOn ? '18px' : '2px';
 }
-
-document.getElementById('tactical-intensity')?.addEventListener('input', e => {
-  const v=parseFloat(e.target.value);
-  document.getElementById('tactical-intensity-val').textContent=v.toFixed(1)+'×';
+document.getElementById('tactical-hit').addEventListener('click', () => {
+  tacticalOn = !tacticalOn;
+  updateToggleUI();
 });
 
-// Receive seat counts back from iframe3 (via parent relay) to show in calculator results
+// ── Run ──────────────────────────────────────────────────────────────────
+function run() {
+  const pollMap = buildUserPollMap();
+  // Intensity is fixed at 1x here — per-seat/campaign intensity is set via the
+  // Tactical Intensity sheet tab in iframe3, not a UI slider.
+  window.parent.postMessage({action:'forecastUpdate', pollMap, tacticalEnabled:tacticalOn, tacticalIntensity:1}, '*');
+  document.getElementById('results').style.display='block';
+  document.getElementById('rgrid').innerHTML='<div style="padding:8px;color:#999;font-size:11px;grid-column:1/-1;">Updating map&hellip;</div>';
+}
+
+function exportCSV() {
+  // The per-seat model output lives in iframe3 — relay the request there.
+  window.parent.postMessage({action:'exportCSV'}, '*');
+}
+
+// Receive seat counts back from iframe3 (via parent relay) to show in the results grid
 window.addEventListener('message', e => {
   if (e.data && e.data.action==='seatCounts' && e.data.counts) {
     const counts=e.data.counts;
@@ -269,14 +381,16 @@ window.addEventListener('message', e => {
     if (!grid) return;
     grid.innerHTML='';
     const sorted=Object.keys(counts).sort((a,b)=>(counts[b]||0)-(counts[a]||0));
-    const maxS=Math.max(...Object.values(counts),1);
     for(const p of sorted){
-      const n=counts[p]||0,prev=S24[p]||0,d=n-prev;
+      const n=counts[p]||0, prev=S24[p]||0, d=n-prev;
+      const colour=COLOURS[p]||'#999', a=ALPHA[p]!=null?ALPHA[p]:0.15;
       const col=document.createElement('div'); col.className='rc';
-      col.innerHTML=`<div class="rp" style="color:${COLOURS[p]||'#999'}">${LABELS[p]||p}</div>
-        <div class="rs" style="color:${COLOURS[p]||'#999'}">${n}</div>
-        <div class="rch" style="color:${COLOURS[p]||'#999'}">${d>=0?'+':''}${d}</div>
-        <div class="rbg"><div class="rb" style="background:${COLOURS[p]||'#999'};width:${Math.round(n/maxS*100)}%"></div></div>`;
+      col.style.background=colour;
+      col.style.boxShadow='inset 0 0 0 999px rgba(0,0,0,'+a+')';
+      col.innerHTML=`<div class="r-num">${n}</div>
+        <div class="r-chg">${d>=0?'+':''}${d}</div>
+        <div class="r-rule"></div>
+        <div class="r-label">${LABELS[p]||p}</div>`;
       grid.appendChild(col);
     }
     document.getElementById('results').style.display='block';
@@ -285,13 +399,17 @@ window.addEventListener('message', e => {
 
 async function init() {
   try {
-    const r = await fetch(POLL_CSV+'&_='+Date.now());
+    const r = await fetchWithRetry(POLL_CSV);
     if (!r.ok) throw new Error('Poll fetch failed '+r.status);
     livePollMap = buildPollMap(parseCSV(await r.text()));
-    const gb = livePollMap['GB-wide'];
-    if (!gb) throw new Error('GB-wide row not found in polling CSV');
-    buildGBInputs(gb);
-    buildRegInputs(livePollMap);
+    if (!livePollMap['GB-wide']) throw new Error('GB-wide row not found in polling CSV');
+
+    showTab('gb');
+    buildGBInputs();
+    buildRegionSelect();
+    buildRegionInputs();
+    updateToggleUI();
+
     document.getElementById('loading').style.display='none';
     document.getElementById('wrap').style.display='block';
     document.getElementById('status').textContent='Polling CSV loaded · run to update map';
