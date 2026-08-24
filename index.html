@@ -1,6 +1,8 @@
 <!-- Iframe 1: Auto-run forecast header -->
+<!-- Heights below are just sane starting values — each iframe reports its
+     real content height on load and resizes itself via the script below. -->
 <iframe src="https://glasgow46239.github.io/britainpredicts/iframe1_forecast_header.html"
-  id="forecast-iframe" width="100%" height="900px" frameborder="0" scrolling="no"></iframe>
+  id="forecast-iframe" width="100%" height="640px" frameborder="0" scrolling="no"></iframe>
 
 <!-- Your article text here -->
 
@@ -14,7 +16,7 @@ Hello how we doing, some nice filler for you all !
 
 <!-- Iframe 3: Map -->
 <iframe src="https://glasgow46239.github.io/britainpredicts/iframe3_map.html"
-  id="map-iframe" width="100%" height="900px" frameborder="0" scrolling="no"></iframe>
+  id="map-iframe" width="100%" height="840px" frameborder="0" scrolling="no"></iframe>
 
 <!-- Communication script — handles scroll + forecast relay -->
 <script>
@@ -38,6 +40,12 @@ window.addEventListener('message', function(e) {
     if (forecastFrame) forecastFrame.contentWindow.postMessage(e.data, '*');
     var calcFrame = document.getElementById('calculator-iframe');
     if (calcFrame) calcFrame.contentWindow.postMessage(e.data, '*');
+  }
+  if (e.data && e.data.action === 'resize' && e.data.frame) {
+    var idByFrame = { forecast: 'forecast-iframe', calculator: 'calculator-iframe', map: 'map-iframe' };
+    var elId = idByFrame[e.data.frame];
+    var el = elId && document.getElementById(elId);
+    if (el && e.data.height) el.style.height = Math.ceil(e.data.height) + 'px';
   }
 });
 </script>
