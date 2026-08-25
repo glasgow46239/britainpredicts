@@ -98,7 +98,7 @@ function renderTiles(counts, isSkeleton) {
     t.style.background = colour;
     t.style.boxShadow = 'inset 0 0 0 999px rgba(0,0,0,'+a+')';
     if (isSkeleton) {
-      t.innerHTML = `<div class="t-num">&ndash;</div>
+      t.innerHTML = `<div class="t-num">...</div>
         <div class="t-chg">&ndash;</div>
         <div class="t-rule"></div>
         <div class="t-label">${LABELS[p]||p}</div>`;
@@ -162,7 +162,7 @@ window.addEventListener('message', e => {
 setTimeout(() => {
   if (!dataLoaded) {
     const status = document.getElementById('load-status');
-    status.textContent = 'Still loading the live forecast — this can take a little while.';
+    status.textContent = 'Still loading the live forecast — bear with!!';
     status.classList.add('visible');
   }
 }, 12000);
