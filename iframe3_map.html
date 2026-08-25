@@ -895,7 +895,7 @@ function buildMapStyle(geojsonData){
     },
     layers:[
       {id:'bg',type:'background',paint:{'background-color':'rgba(245,242,232,1)'}},
-      {id:'water',type:'fill',source:'basemap','source-layer':'water',paint:{'fill-color':'hsl(59,56%,99%)','fill-opacity':0}},
+      {id:'water',type:'fill',source:'basemap','source-layer':'water',paint:{'fill-color':'hsl(59,56%,99%)','fill-opacity':0.7}},
       {id:'landcover-green',type:'fill',source:'basemap','source-layer':'landuse',filter:['in',['get','class'],['literal',['park','grass','cemetery','forest','meadow','nature_reserve']]],paint:{'fill-color':'hsl(82,46%,72%)','fill-opacity':0.5}},
       {id:'landuse-residential',type:'fill',source:'basemap','source-layer':'landuse',filter:['in',['get','class'],['literal',['residential','suburb','neighbourhood']]],paint:{'fill-color':'rgba(222,211,190,1)','fill-opacity':0.45}},
       {id:'road-path',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['path','track','service']]],paint:{'line-color':'rgba(200,195,185,1)','line-width':['interpolate',['linear'],['zoom'],13,0.4,17,1.2]}},
