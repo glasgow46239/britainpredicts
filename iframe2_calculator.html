@@ -38,7 +38,7 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 .region-row    { display:flex; align-items:center; gap:0.5rem; margin-left:auto; visibility:hidden; }
 .region-row.visible { visibility:visible; }
 .region-select { border:1px solid #e0e0e0; border-radius:12px; padding:0.5rem 0.75rem; font-size:0.9375rem; font-family:inherit; background:#fff; color:#333; cursor:pointer; outline:none; }
-#tactical-wrap  { padding:0.875rem 1.25rem 0.625rem; }
+#tactical-wrap  { padding:0rem 0rem 0.5rem; }
 .tactical-row   { display:flex; align-items:center; justify-content:space-between; gap:0.625rem; padding:0.625rem 0.875rem; border-radius:8px; background:#f5f5f5; }
 .tactical-label { font-size:1rem; font-weight:600; color:#333; }
 .toggle-tap     { display:flex; align-items:center; gap:0.5rem; cursor:pointer; flex-shrink:0; padding:0.6875rem 0.25rem; margin:-0.6875rem -0.25rem; }
@@ -59,7 +59,7 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 .r-chg   { font-size:2rem; font-weight:500; margin-top:0.25rem; font-variant-numeric:tabular-nums; color:rgba(255,255,255,.82); text-align:right; }
 .r-rule  { height:2px; margin:0.5rem 0; background:rgba(0,0,0,.25); align-self:stretch; }
 .r-label { font-size:2rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; text-align:right; }
-#status  { font-size:0.75rem; color:#ccc; text-align:right; padding:0 1.25rem 0.625rem; }
+#status  { font-size:0.75rem; color:#ccc; text-align:right; padding:0.5rem 0rem 0rem 0rem; }
 </style>
 </head>
 <body>
@@ -67,8 +67,8 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 <div id="error"></div>
 <div id="wrap">
   <div id="header">
-    <h2>Create your own forecast with Britain Elects</h2>
-    <p>Adjust the numbers in the boxes below</p>
+    <h2>Create your own forecast</h2>
+    <p>Adjust the numbers in the boxes below to see what the Britain Elects model says</p>
   </div>
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.625rem;padding:0.5rem 0rem 0.5rem 0;">
     <div class="pill">
@@ -381,7 +381,7 @@ async function init() {
     updateToggleUI();
     document.getElementById('loading').style.display='none';
     document.getElementById('wrap').style.display='block';
-    document.getElementById('status').textContent='Britain Elects data loaded';
+    document.getElementById('status').textContent='Britain Elects Poll Tracker data: loaded';
   } catch(e) {
     document.getElementById('loading').style.display='none';
     document.getElementById('error').style.display='block';
