@@ -73,10 +73,10 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.625rem;padding:0.5rem 0rem 0.5rem 0;">
     <div class="pill">
       <button class="pill-btn" id="tab-gb"  onclick="showTab('gb')">GB-wide</button>
-      <button class="pill-btn" id="tab-reg" onclick="showTab('reg')">By region</button>
+      <button class="pill-btn" id="tab-reg" onclick="showTab('reg')">Drilldown</button>
     </div>
     <div class="region-row" id="region-row">
-      <span class="tlbl" style="text-transform:uppercase;letter-spacing:.05em;">Region</span>
+      <span class="tlbl" style="text-transform:uppercase;letter-spacing:.05em;">Nation / Region</span>
       <select class="region-select" id="region-select"></select>
     </div>
   </div>
@@ -84,8 +84,8 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
     <div id="gb-grid" class="grid8"></div>
     <div class="ctrl">
       <div class="ctrl-l">
-        <button class="cbtn" onclick="resetGB()">Reset to poll</button>
-        <button class="cbtn" onclick="normaliseGBToTotal()">Normalise</button>
+        <button class="cbtn" onclick="resetGB()">Reset to Poll Tracker</button>
+        <button class="cbtn" onclick="normaliseGBToTotal()">Adjust to 100%</button>
       </div>
       <div class="tlbl" style="text-align:right;">Con&ndash;Ind total: <span class="tval" id="tot-gb" style="color:#059669">&mdash;</span><br>SNP &amp; PC use their own regional base</div>
     </div>
@@ -110,10 +110,10 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
       </div>
     </div>
   </div>
-  <div id="run-wrap"><button id="run-btn" onclick="run()">Run forecast &rsaquo;</button></div>
+  <div id="run-wrap"><button id="run-btn" onclick="run()">Run Britain Predicts &rsaquo;</button></div>
   <div id="results">
     <div id="results-head">
-      <div id="rlbl">Election projection</div>
+      <div id="rlbl">Britain Predicts election projection</div>
       <button class="export-btn" onclick="exportCSV()">&darr; Export to CSV</button>
     </div>
     <div id="rgrid"></div>
