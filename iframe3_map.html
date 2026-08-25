@@ -188,7 +188,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;
     <div id="legend-title">Vote share</div>
     <div id="legend-bins">
       <div id="legend-bins-row"></div>
-      <div id="legend-bins-labels"><span>&minus;10pt</span><span>Flat</span><span>+10pt</span></div>
+      <div id="legend-bins-labels"><span>&minus;20pt</span><span></span><span>+20pt</span></div>
     </div>
   </div>
 
@@ -231,14 +231,14 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;
 // Lowercase keys to match STM model output
 // ============================================================
 const PARTIES = {
-  grn:  { label:'Green',        short:'Grn',    color:'#5CBC4A' },
-  lab:  { label:'Labour',       short:'Lab',    color:'#D34C4C' },
-  snp:  { label:'SNP',          short:'SNP',    color:'#EEE03C' },
-  pc:   { label:'Plaid Cymru',  short:'PC',     color:'#469366' },
-  ldem: { label:'Lib Dem',      short:'LDem',   color:'#ebb82f' },
-  oth:  { label:'Other',        short:'Oth',    color:'#CCA7C6' },
-  con:  { label:'Conservative', short:'Con',    color:'#05718F' },
-  ref:  { label:'Reform',       short:'Reform', color:'#15B6C2' },
+  grn:  { label:'Green',        short:'Grn',    color:'#02A95B' },
+  lab:  { label:'Labour',       short:'Lab',    color:'#E4003B' },
+  snp:  { label:'SNP',          short:'SNP',    color:'#C8A400' },
+  pc:   { label:'Plaid Cymru',  short:'PC',     color:'#3F8428' },
+  ldem: { label:'Lib Dem',      short:'LDem',   color:'#FAA61A' },
+  oth:  { label:'Other',        short:'Oth',    color:'#57534e' },
+  con:  { label:'Conservative', short:'Con',    color:'#0087DC' },
+  ref:  { label:'Reform',       short:'Reform', color:'#12B6CF' },
 };
 
 // Display order for stacked bars
@@ -1061,16 +1061,18 @@ function buildChoroplethExpr(partyKey,ceiling){
 // Party swing since 2024 — how a SINGLE party's own vote share has moved in
 // each seat, independent of who wins it. Discrete bins (not a gradient):
 // deciding whether a seat is "up" or "down" for a party matters more than
-// reading an exact number off a continuous ramp.
-const SWING_BINS = [
-  {max:-10, color:'#7A1315'},
-  {max:-5,  color:'#DC2626'},
-  {max:-1,  color:'#F1A9A6'},
-  {max:1,   color:'#e5e5e5'},
-  {max:5,   color:'#A8D8BC'},
-  {max:10,  color:'#059669'},
-  {max:Infinity, color:'#046350'},
-];
+// reading an exact number off a continuous ramp. Bins standardised to 5pt
+// steps out to ±20pt; no separate "flat" bucket — the near-zero bin just
+// falls out of the same tint blend used for the rest of the scale.
+const SWING_NEG = '#d45a49';
+const SWING_POS = '#009076';
+const SWING_BREAKS = [-20,-15,-10,-5,5,10,15,20];
+const SWING_BINS = SWING_BREAKS.map((max,i)=>{
+  const mid = i===0 ? max : (SWING_BREAKS[i-1]+max)/2;
+  const t = Math.min(Math.abs(mid)/20,1);
+  return {max, color:tintBlend(mid<0?SWING_NEG:SWING_POS, t)};
+});
+SWING_BINS.push({max:Infinity, color:SWING_POS});
 function swingBinColor(pts){for(const b of SWING_BINS){if(pts<b.max)return b.color;}return SWING_BINS[SWING_BINS.length-1].color;}
 
 function buildSwingExpr(partyKey){
@@ -1195,7 +1197,7 @@ function initChoropleth(map){
       flipLegend.classList.remove('visible');
       const p=PARTIES[party];
       legendTitle.textContent=p.label+' vote share vs. 2024';
-      renderLegendBins(SWING_BINS.map(b=>b.color),['−10pt','Flat','+10pt']);
+      renderLegendBins(SWING_BINS.map(b=>b.color),['−20pt','','+20pt']);
       legend.classList.add('visible');legendBins.classList.add('visible');
     }
   }
