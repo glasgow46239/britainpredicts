@@ -10,7 +10,7 @@
 body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0;}
 
 /* ── Control bar ── */
-#control-bar{display:flex;flex-direction:column;gap:8px;padding:8px 10px;background:#f0ede8;border-bottom:1px solid #ddd;}
+#control-bar{display:flex;flex-direction:column;gap:8px;padding:8px 10px;background:#fff;border-bottom:1px solid #ddd;}
 #control-row1{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
 #control-row2{display:flex;align-items:center;gap:8px;padding-left:2px;}
 @media(max-width:480px){#control-row1{gap:8px;}#view-controls{width:100%;}#search-wrap{max-width:100%;}}
@@ -153,7 +153,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;
       <select id="party-select"></select>
     </div>
     <div id="flip-controls">
-      <span class="vc-label">Flipped seats</span>
+      <span class="vc-label">Highlight seats which changed hands</span>
       <div class="vc-seg">
         <button class="vc-btn" data-flip="off">Off</button>
         <button class="vc-btn active" data-flip="on">On</button>
@@ -187,9 +187,9 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;
   </div>
 
   <div id="flip-legend">
-    <div id="flip-legend-title">Flipped seats</div>
-    <div class="fl-row"><div class="fl-swatch fl-held"></div><span>Held</span></div>
-    <div class="fl-row"><div class="fl-swatch fl-flip"></div><span>Flipped</span></div>
+    <div id="flip-legend-title">Seat status</div>
+    <div class="fl-row"><div class="fl-swatch fl-held"></div><span>Hold</span></div>
+    <div class="fl-row"><div class="fl-swatch fl-flip"></div><span>Gain</span></div>
   </div>
 
   <div id="pin-indicator" role="button" title="Click to unpin">
@@ -895,7 +895,7 @@ function buildMapStyle(geojsonData){
     },
     layers:[
       {id:'bg',type:'background',paint:{'background-color':'rgba(245,242,232,1)'}},
-      {id:'water',type:'fill',source:'basemap','source-layer':'water',paint:{'fill-color':'hsl(59,56%,99%)','fill-opacity':0.9}},
+      {id:'water',type:'fill',source:'basemap','source-layer':'water',paint:{'fill-color':'hsl(59,56%,99%)','fill-opacity':0}},
       {id:'landcover-green',type:'fill',source:'basemap','source-layer':'landuse',filter:['in',['get','class'],['literal',['park','grass','cemetery','forest','meadow','nature_reserve']]],paint:{'fill-color':'hsl(82,46%,72%)','fill-opacity':0.5}},
       {id:'landuse-residential',type:'fill',source:'basemap','source-layer':'landuse',filter:['in',['get','class'],['literal',['residential','suburb','neighbourhood']]],paint:{'fill-color':'rgba(222,211,190,1)','fill-opacity':0.45}},
       {id:'road-path',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['path','track','service']]],paint:{'line-color':'rgba(200,195,185,1)','line-width':['interpolate',['linear'],['zoom'],13,0.4,17,1.2]}},
