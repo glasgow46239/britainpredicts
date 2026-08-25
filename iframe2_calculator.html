@@ -10,17 +10,13 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 #loading { padding:24px; color:#999; text-align:center; }
 #error   { padding:16px; color:#c00; font-size:12px; display:none; }
 #wrap    { display:none; }
-
 #header  { padding:0rem 0rem 0.5rem; border-bottom:1px solid #f0f0f0; }
 #header h2 { font-size:2rem; font-weight:700; color:#111; }
 #header p  { font-size:1rem; color:#888; margin-top:0.1875rem; }
-
 .pill    { display:inline-flex; border:1px solid #e0e0e0; border-radius:12px; overflow:hidden; }
 .pill-btn{ padding:0.625rem 1.125rem; font-size:1rem; font-weight:700; font-family:inherit; border:none; background:transparent; cursor:pointer; }
-
 .panel   { display:none; padding:0.5rem 0rem 0.5rem; }
 .panel.active { display:block; }
-
 .grid8   { display:grid; grid-template-columns:repeat(4,1fr); gap:0.625rem; }
 @media(min-width:500px){ .grid8 { grid-template-columns:repeat(8,1fr); } }
 .ic      { display:flex; flex-direction:column; align-items:center; gap:0.375rem; }
@@ -29,14 +25,12 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 .if      { width:100%; border:1.5px solid #ddd; border-radius:8px; text-align:center; font-size:1rem; font-weight:700; padding:0.625rem 0.125rem; outline:none; font-family:inherit; color:#111; }
 .if:focus{ border-color:#111; box-shadow:0 0 0 2px rgba(0,0,0,.06); }
 .if-region{ border-color:#e5c9e2; background:#fbf5fa; }
-
 .ctrl    { display:flex; align-items:center; justify-content:space-between; padding:0.625rem 0.125rem 0.25rem; flex-wrap:wrap; gap:0.5rem; }
 .ctrl-l  { display:flex; gap:0.5rem; }
 .tlbl    { font-size:0.8125rem; color:#999; }
 .tval    { font-size:0.8125rem; font-weight:700; }
 .cbtn    { padding:0.5rem 1rem; border:1px solid #e0e0e0; border-radius:12px; font-size:0.8125rem; font-weight:700; cursor:pointer; background:#fff; color:#555; font-family:inherit; }
 .cbtn:hover{ background:#f5f5f5; }
-
 /* Sits alongside the GB-wide/By region pill (not inside either ) so
    its row height never changes as you switch tabs — visibility:hidden (not
    display:none) keeps the space reserved even while it's inert, so nothing
@@ -44,18 +38,15 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 .region-row    { display:flex; align-items:center; gap:0.5rem; margin-left:auto; visibility:hidden; }
 .region-row.visible { visibility:visible; }
 .region-select { border:1px solid #e0e0e0; border-radius:12px; padding:0.5rem 0.75rem; font-size:0.9375rem; font-family:inherit; background:#fff; color:#333; cursor:pointer; outline:none; }
-
 #tactical-wrap  { padding:0.875rem 1.25rem 0.625rem; }
 .tactical-row   { display:flex; align-items:center; justify-content:space-between; gap:0.625rem; padding:0.625rem 0.875rem; border-radius:8px; background:#f5f5f5; }
 .tactical-label { font-size:1rem; font-weight:600; color:#333; }
 .toggle-tap     { display:flex; align-items:center; gap:0.5rem; cursor:pointer; flex-shrink:0; padding:0.6875rem 0.25rem; margin:-0.6875rem -0.25rem; }
 .toggle         { width:2.375rem; height:1.375rem; border-radius:0.6875rem; position:relative; transition:background .15s; flex-shrink:0; }
 .toggle-knob    { position:absolute; top:2px; width:1.125rem; height:1.125rem; border-radius:50%; background:#fff; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.25); }
-
 #run-wrap{ padding:0; }
 #run-btn { width:100%; padding:0.875rem; background:#111; color:#fff; border:none; border-radius:8px; font-size:1.0625rem; font-weight:700; cursor:pointer; font-family:inherit; }
 #run-btn:hover{ background:#333; }
-
 #results { padding:0; display:none; }
 #results-head{ display:flex; align-items:center; justify-content:space-between; gap:0.5rem; margin-bottom:0.5rem; margin-top:0.5rem; }
 #rlbl    { font-size:0.75rem; font-weight:700; color:#666; text-transform:uppercase; letter-spacing:.05em; }
@@ -68,7 +59,6 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 .r-chg   { font-size:2rem; font-weight:500; margin-top:0.25rem; font-variant-numeric:tabular-nums; color:rgba(255,255,255,.82); text-align:right; }
 .r-rule  { height:2px; margin:0.5rem 0; background:rgba(0,0,0,.25); align-self:stretch; }
 .r-label { font-size:2rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; text-align:right; }
-
 #status  { font-size:0.75rem; color:#ccc; text-align:right; padding:0 1.25rem 0.625rem; }
 </style>
 </head>
@@ -80,7 +70,6 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
     <h2>Create your own forecast with Britain Elects</h2>
     <p>Adjust the numbers in the boxes below</p>
   </div>
-
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.625rem;padding:0.5rem 0rem 0.5rem 0;">
     <div class="pill">
       <button class="pill-btn" id="tab-gb"  onclick="showTab('gb')">GB-wide</button>
@@ -91,8 +80,7 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
       <select class="region-select" id="region-select"></select>
     </div>
   </div>
-
-  <div id="-gb" class="panel active">
+  <div id="panel-gb" class="panel active">
     <div id="gb-grid" class="grid8"></div>
     <div class="ctrl">
       <div class="ctrl-l">
@@ -102,7 +90,6 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
       <div class="tlbl" style="text-align:right;">Con&ndash;Ind total: <span class="tval" id="tot-gb" style="color:#059669">&mdash;</span><br>SNP &amp; PC use their own regional base</div>
     </div>
   </div>
-
   <div id="panel-reg" class="panel">
     <div id="reg-grid" class="grid8"></div>
     <div class="ctrl">
@@ -113,7 +100,6 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
       <div class="tlbl">Total: <span class="tval" id="tot-reg">&mdash;</span></div>
     </div>
   </div>
-
   <div id="tactical-wrap">
     <div class="tactical-row">
       <span class="tactical-label">Tactical voting</span>
@@ -124,9 +110,7 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
       </div>
     </div>
   </div>
-
   <div id="run-wrap"><button id="run-btn" onclick="run()">Run forecast &rsaquo;</button></div>
-
   <div id="results">
     <div id="results-head">
       <div id="rlbl">Election projection</div>
@@ -139,7 +123,6 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 <script>
 const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=';
 const POLL_CSV = BASE_URL + '0&single=true&output=csv';
-
 const PARTIES = ['con','lab','ldem','grn','ref','oth','snp','pc']; // snp/pc last — matches the approved card order, and keeps their regional-base inputs visually set apart from the 6 main GB-wide parties
 const GB_MAIN_PARTIES = ['con','lab','ldem','grn','ref','oth']; // snp/pc use their own regional base on the GB-wide tab
 const REGIONS  = ['Scotland','Wales','Northern England','Southern England','Midlands','London'];
@@ -147,12 +130,10 @@ const LABELS   = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',re
 const COLOURS  = {con:'#05718F',lab:'#D34C4C',ldem:'#EBB82F',grn:'#5CBC4A',snp:'#EEE03C',pc:'#469366',ref:'#15B6C2',oth:'#CCA7C6'};
 const ALPHA    = {con:0,lab:0,ldem:0,grn:0,snp:.48,pc:0,ref:0,oth:0};
 const S24      = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
-
 let livePollMap = {};
 let regionEdits = {};      // region -> {party: value}, in-memory so switching the region select preserves edits
 let currentRegion = REGIONS[0];
 let tacticalOn = true;
-
 function parseCSV(text) {
   const lines = text.trim().split('\n').filter(l=>l.trim());
   if (!lines.length) return [];
@@ -164,7 +145,6 @@ function parseCSV(text) {
     return o;
   });
 }
-
 function buildPollMap(rows) {
   const map = {};
   for (const row of rows) {
@@ -179,7 +159,6 @@ function buildPollMap(rows) {
   }
   return map;
 }
-
 async function fetchWithRetry(url, retries=3) {
   for (let i = 0; i < retries; i++) {
     try {
@@ -192,7 +171,6 @@ async function fetchWithRetry(url, retries=3) {
     }
   }
 }
-
 function showTab(tab) {
   document.getElementById('tab-gb').classList.toggle('active', tab==='gb');
   document.getElementById('tab-reg').classList.toggle('active', tab==='reg');
@@ -204,22 +182,18 @@ function showTab(tab) {
   document.getElementById('panel-reg').classList.toggle('active', tab==='reg');
   document.getElementById('region-row').classList.toggle('visible', tab==='reg');
 }
-
 function val(id) { return parseFloat(document.getElementById(id)?.value||0)||0; }
 function setVal(id, v) { const el=document.getElementById(id); if(el) el.value=(+v).toFixed(1); }
-
 function updateTotalGB() {
   let t=0; GB_MAIN_PARTIES.forEach(p=>{t+=val('gb_'+p);});
   const el=document.getElementById('tot-gb');
   if(el){ el.textContent=t.toFixed(1)+'%'; el.style.color=Math.abs(t-100)<0.5?'#059669':'#DC2626'; }
 }
-
 function updateTotalReg() {
   let t=0; PARTIES.forEach(p=>{t+=val('reg_'+p);});
   const el=document.getElementById('tot-reg');
   if(el){ el.textContent=t.toFixed(1)+'%'; el.style.color=Math.abs(t-100)<0.5?'#059669':'#DC2626'; }
 }
-
 // ── GB-wide tab ──────────────────────────────────────────────────────────
 function buildGBInputs() {
   const liveGB = livePollMap['GB-wide']||{};
@@ -240,7 +214,6 @@ function buildGBInputs() {
   });
   updateTotalGB();
 }
-
 function onGBChange() {
   updateTotalGB();
   const liveGB = livePollMap['GB-wide']||{};
@@ -256,7 +229,6 @@ function onGBChange() {
     if (region === currentRegion) loadRegionIntoInputs(region);
   });
 }
-
 function resetGB() {
   const liveGB = livePollMap['GB-wide']||{};
   const liveScotland = livePollMap['Scotland']||{};
@@ -269,7 +241,6 @@ function resetGB() {
   updateTotalGB();
   loadRegionIntoInputs(currentRegion);
 }
-
 // Scales whatever's currently entered so the 6 main parties sum to exactly
 // 100%, preserving their relative proportions. SNP/PC sit outside this total
 // (their own regional base) so they're left untouched.
@@ -279,7 +250,6 @@ function normaliseGBToTotal() {
   GB_MAIN_PARTIES.forEach(p => { setVal('gb_'+p, val('gb_'+p)/t*100); });
   onGBChange();
 }
-
 // ── By-region tab ────────────────────────────────────────────────────────
 function buildRegionSelect() {
   const sel = document.getElementById('region-select');
@@ -295,7 +265,6 @@ function buildRegionSelect() {
     loadRegionIntoInputs(currentRegion);
   });
 }
-
 function buildRegionInputs() {
   const grid = document.getElementById('reg-grid');
   grid.innerHTML = '';
@@ -309,34 +278,29 @@ function buildRegionInputs() {
   });
   loadRegionIntoInputs(currentRegion);
 }
-
 function loadRegionIntoInputs(region) {
   const src = regionEdits[region] || livePollMap[region] || livePollMap['GB-wide'] || {};
   PARTIES.forEach(p => setVal('reg_'+p, src[p]||0));
   updateTotalReg();
 }
-
 function onRegionInputChange() {
   const edits = regionEdits[currentRegion] || (regionEdits[currentRegion] = {});
   PARTIES.forEach(p => { edits[p] = val('reg_'+p); });
   updateTotalReg();
   syncGBFromRegion();
 }
-
 function syncGBFromRegion() {
   // Scotland's SNP % and Wales's PC % are the same number shown on the
   // GB-wide tab — keep that field in sync whenever the region tab changes it.
   if (currentRegion === 'Scotland') setVal('gb_snp', regionEdits.Scotland?.snp ?? val('reg_snp'));
   if (currentRegion === 'Wales')    setVal('gb_pc',  regionEdits.Wales?.pc ?? val('reg_pc'));
 }
-
 function resetReg() {
   const rp = livePollMap[currentRegion] || livePollMap['GB-wide'] || {};
   regionEdits[currentRegion] = Object.assign({}, rp);
   loadRegionIntoInputs(currentRegion);
   syncGBFromRegion();
 }
-
 // Scales the selected region's currently-entered shares so all 8 parties
 // sum to exactly 100%, preserving their relative proportions.
 function normaliseRegToTotal() {
@@ -347,7 +311,6 @@ function normaliseRegToTotal() {
   loadRegionIntoInputs(currentRegion);
   syncGBFromRegion();
 }
-
 // ── Build the poll map sent to iframe3 ──────────────────────────────────
 function buildUserPollMap() {
   const liveGB = livePollMap['GB-wide']||{};
@@ -360,7 +323,6 @@ function buildUserPollMap() {
   });
   return map;
 }
-
 // ── Tactical toggle ──────────────────────────────────────────────────────
 function updateToggleUI() {
   document.getElementById('toggle-track').style.background = tacticalOn ? '#111' : '#ddd';
@@ -370,7 +332,6 @@ document.getElementById('tactical-hit').addEventListener('click', () => {
   tacticalOn = !tacticalOn;
   updateToggleUI();
 });
-
 // ── Run ──────────────────────────────────────────────────────────────────
 function run() {
   const pollMap = buildUserPollMap();
@@ -380,12 +341,10 @@ function run() {
   document.getElementById('results').style.display='block';
   document.getElementById('rgrid').innerHTML='<div style="padding:8px;color:#999;font-size:11px;grid-column:1/-1;">Updating map&hellip;</div>';
 }
-
 function exportCSV() {
   // The per-seat model output lives in iframe3 — relay the request there.
   window.parent.postMessage({action:'exportCSV'}, '*');
 }
-
 // Receive seat counts back from iframe3 (via parent relay) to show in the results grid
 window.addEventListener('message', e => {
   if (e.data && e.data.action==='seatCounts' && e.data.counts) {
@@ -409,20 +368,17 @@ window.addEventListener('message', e => {
     document.getElementById('results').style.display='block';
   }
 });
-
 async function init() {
   try {
     const r = await fetchWithRetry(POLL_CSV);
     if (!r.ok) throw new Error('Poll fetch failed '+r.status);
     livePollMap = buildPollMap(parseCSV(await r.text()));
     if (!livePollMap['GB-wide']) throw new Error('Internal error, please hold');
-
     showTab('gb');
     buildGBInputs();
     buildRegionSelect();
     buildRegionInputs();
     updateToggleUI();
-
     document.getElementById('loading').style.display='none';
     document.getElementById('wrap').style.display='block';
     document.getElementById('status').textContent='Britain Elects data loaded';
@@ -434,7 +390,6 @@ async function init() {
   }
 }
 init();
-
 // ── Auto-resize ──────────────────────────────────────────────────────────
 // A fixed iframe height can't fit every tab/state of this calculator at
 // once — so report actual content height to the parent page instead, which
