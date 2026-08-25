@@ -99,7 +99,7 @@ function renderTiles(counts, isSkeleton) {
     t.style.boxShadow = 'inset 0 0 0 999px rgba(0,0,0,'+a+')';
     if (isSkeleton) {
       t.innerHTML = `<div class="t-num">...</div>
-        <div class="t-chg">&ndash;</div>
+        <div class="t-chg">...</div>
         <div class="t-rule"></div>
         <div class="t-label">${LABELS[p]||p}</div>`;
     } else {
