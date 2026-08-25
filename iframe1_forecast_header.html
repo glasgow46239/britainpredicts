@@ -20,6 +20,18 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 .t-rule  { height:2px; margin:0.5rem 0; background:rgba(0,0,0,.25); align-self:stretch; }
 .t-label { font-size:2rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; text-align:right; }
 
+/* Skeleton state — card frames (colour/label) show immediately; the number
+   itself pulses until the real per-seat model finishes in iframe3 and posts
+   seatCounts back. */
+.tile-skeleton .t-num, .tile-skeleton .t-chg { animation:tile-pulse 1.4s ease-in-out infinite; }
+@keyframes tile-pulse { 0%,100% { opacity:.5; } 50% { opacity:.95; } }
+
+.load-status { display:none; font-size:0.75rem; color:#999; text-align:center; padding:0 1rem 0.75rem; }
+.load-status.visible { display:block; }
+
+#tactical-wrap.tactical-loading .tactical-row { opacity:.5; }
+#tactical-wrap.tactical-loading .toggle-tap   { cursor:default; }
+
 #btns    { display:flex; flex-direction:column; gap:0.5rem; padding:0; }
 @media(min-width:480px){ #btns { flex-direction:row; gap:0.625rem; } }
 .btn     { width:100%; padding:1rem; border:none; border-radius:8px; font-size:1rem; font-weight:700; cursor:pointer; font-family:inherit; transition:background .15s; }
@@ -43,11 +55,12 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 <div id="error"></div>
 <div id="wrap">
   <div id="tiles-wrap"><div id="tiles" class="tiles"></div></div>
+  <div id="load-status" class="load-status"></div>
   <div id="btns">
     <button class="btn btn-primary" onclick="window.parent.postMessage({action:'scrollToCalculator'},'*')">Create your own forecast</button>
     <button class="btn btn-secondary" onclick="window.parent.postMessage({action:'scrollToMap'},'*')">View the map</button>
   </div>
-  <div id="tactical-wrap">
+  <div id="tactical-wrap" class="tactical-loading">
     <div class="tactical-row">
       <span class="tactical-label">Tactical voting &mdash; see the effect on the numbers above</span>
       <div class="toggle-tap" id="tactical-hit">
@@ -68,28 +81,44 @@ const COLOURS = {con:'#05718F',lab:'#D34C4C',ldem:'#EBB82F',grn:'#5CBC4A',snp:'#
 const ALPHA   = {con:.12,lab:.12,ldem:.40,grn:.25,snp:.48,pc:.12,ref:.20,oth:.40};
 const S24     = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
 
-let lastCounts = null, lastWith = null, lastWithout = null, tacticalOn = true;
+let lastCounts = null, lastWith = null, lastWithout = null, tacticalOn = true, dataLoaded = false;
 
-function renderTiles(counts) {
+// isSkeleton renders the card frames (colour, label) straight away, before
+// the real per-seat model has finished in iframe3 — only the order (by 2024
+// baseline) and the number/change values are placeholders, pulsing until
+// the first real seatCounts message swaps them in.
+function renderTiles(counts, isSkeleton) {
   const order = Object.keys(counts).sort((a,b) => (counts[b]||0)-(counts[a]||0));
   const el = document.getElementById('tiles');
   el.innerHTML = '';
   for (const p of order) {
-    const n = counts[p]||0, prev = S24[p]||0, d = n-prev;
     const colour = COLOURS[p]||'#999', a = ALPHA[p]!=null?ALPHA[p]:0.15;
     const t = document.createElement('div');
-    t.className = 'tile';
+    t.className = 'tile' + (isSkeleton ? ' tile-skeleton' : '');
     t.style.background = colour;
     t.style.boxShadow = 'inset 0 0 0 999px rgba(0,0,0,'+a+')';
-    t.innerHTML = `<div class="t-num">${n}</div>
-      <div class="t-chg">${d>=0?'+':''}${d}</div>
-      <div class="t-rule"></div>
-      <div class="t-label">${LABELS[p]||p}</div>`;
+    if (isSkeleton) {
+      t.innerHTML = `<div class="t-num">&ndash;</div>
+        <div class="t-chg">&ndash;</div>
+        <div class="t-rule"></div>
+        <div class="t-label">${LABELS[p]||p}</div>`;
+    } else {
+      const n = counts[p]||0, prev = S24[p]||0, d = n-prev;
+      t.innerHTML = `<div class="t-num">${n}</div>
+        <div class="t-chg">${d>=0?'+':''}${d}</div>
+        <div class="t-rule"></div>
+        <div class="t-label">${LABELS[p]||p}</div>`;
+    }
     el.appendChild(t);
   }
   document.getElementById('loading').style.display = 'none';
   document.getElementById('wrap').style.display = 'block';
 }
+
+// Show the card frames immediately — sorted by 2024 baseline seat count,
+// since the real order isn't known until the model finishes — rather than
+// making the whole header wait on iframe3's map load.
+renderTiles(S24, true);
 
 function updateToggleUI() {
   document.getElementById('toggle-track').style.background = tacticalOn ? '#111' : '#ddd';
@@ -98,10 +127,11 @@ function updateToggleUI() {
 
 function displayForCurrentToggle() {
   const counts = tacticalOn ? (lastWith || lastCounts) : (lastWithout || lastCounts);
-  if (counts) renderTiles(counts);
+  if (counts) renderTiles(counts, false);
 }
 
 document.getElementById('tactical-hit').addEventListener('click', () => {
+  if (!dataLoaded) return; // nothing to flip between until the model's run once
   tacticalOn = !tacticalOn;
   updateToggleUI();
   displayForCurrentToggle();
@@ -117,15 +147,23 @@ window.addEventListener('message', e => {
     lastWith = e.data.withTactical || null;
     lastWithout = e.data.withoutTactical || null;
     tacticalOn = (typeof e.data.tacticalEnabled === 'boolean') ? e.data.tacticalEnabled : true;
+    if (!dataLoaded) {
+      dataLoaded = true;
+      document.getElementById('tactical-wrap').classList.remove('tactical-loading');
+      document.getElementById('load-status').classList.remove('visible');
+    }
     updateToggleUI();
     displayForCurrentToggle();
   }
 });
 
-// Fallback: if no seatCounts received after 12s, show a helpful message
+// If the model's still crunching after 12s, say so under the cards — the
+// cards themselves are already showing (see renderTiles(S24, true) above).
 setTimeout(() => {
-  if (document.getElementById('wrap').style.display === 'none') {
-    document.getElementById('loading').textContent = 'Waiting for map to load…';
+  if (!dataLoaded) {
+    const status = document.getElementById('load-status');
+    status.textContent = 'Still loading the live forecast — this can take a little while.';
+    status.classList.add('visible');
   }
 }, 12000);
 
