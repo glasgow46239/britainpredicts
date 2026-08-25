@@ -11,14 +11,14 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 #error   { padding:16px; color:#c00; font-size:12px; display:none; }
 #wrap    { display:none; }
 
-#header  { padding:0.875rem 1.25rem 0.625rem; border-bottom:1px solid #f0f0f0; }
-#header h2 { font-size:1.125rem; font-weight:700; color:#111; }
-#header p  { font-size:0.875rem; color:#888; margin-top:0.1875rem; }
+#header  { padding:0rem 0rem 0.5rem; border-bottom:1px solid #f0f0f0; }
+#header h2 { font-size:2rem; font-weight:700; color:#111; }
+#header p  { font-size:1rem; color:#888; margin-top:0.1875rem; }
 
 .pill    { display:inline-flex; border:1px solid #e0e0e0; border-radius:12px; overflow:hidden; }
 .pill-btn{ padding:0.625rem 1.125rem; font-size:1rem; font-weight:700; font-family:inherit; border:none; background:transparent; cursor:pointer; }
 
-.panel   { display:none; padding:1rem 1.25rem 0.25rem; }
+.panel   { display:none; padding:0.5rem 0rem 0.5rem; }
 .panel.active { display:block; }
 
 .grid8   { display:grid; grid-template-columns:repeat(4,1fr); gap:0.625rem; }
@@ -37,7 +37,7 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 .cbtn    { padding:0.5rem 1rem; border:1px solid #e0e0e0; border-radius:12px; font-size:0.8125rem; font-weight:700; cursor:pointer; background:#fff; color:#555; font-family:inherit; }
 .cbtn:hover{ background:#f5f5f5; }
 
-/* Sits alongside the GB-wide/By region pill (not inside either panel) so
+/* Sits alongside the GB-wide/By region pill (not inside either ) so
    its row height never changes as you switch tabs — visibility:hidden (not
    display:none) keeps the space reserved even while it's inert, so nothing
    below shifts up or down on tab switch. */
@@ -57,7 +57,7 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 #run-btn:hover{ background:#333; }
 
 #results { padding:0; display:none; }
-#results-head{ display:flex; align-items:center; justify-content:space-between; gap:0.5rem; margin-bottom:0.5rem; }
+#results-head{ display:flex; align-items:center; justify-content:space-between; gap:0.5rem; margin-bottom:0.5rem; margin-top:0.5rem; }
 #rlbl    { font-size:0.75rem; font-weight:700; color:#666; text-transform:uppercase; letter-spacing:.05em; }
 .export-btn{ padding:0.4375rem 0.75rem; border:1px solid #e0e0e0; border-radius:12px; font-size:0.75rem; font-weight:700; cursor:pointer; background:#fff; color:#555; font-family:inherit; white-space:nowrap; }
 .export-btn:hover{ background:#f5f5f5; }
@@ -77,11 +77,11 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 <div id="error"></div>
 <div id="wrap">
   <div id="header">
-    <h2>Create Your Forecast</h2>
-    <p>Adjust poll shares then run &mdash; changes update the map</p>
+    <h2>Create your own forecast with Britain Elects</h2>
+    <p>Adjust the numbers in the boxes below</p>
   </div>
 
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.625rem;padding:0.875rem 1.25rem 0;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.625rem;padding:0.5rem 0rem 0.5rem 0;">
     <div class="pill">
       <button class="pill-btn" id="tab-gb"  onclick="showTab('gb')">GB-wide</button>
       <button class="pill-btn" id="tab-reg" onclick="showTab('reg')">By region</button>
@@ -92,7 +92,7 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
     </div>
   </div>
 
-  <div id="panel-gb" class="panel active">
+  <div id="-gb" class="panel active">
     <div id="gb-grid" class="grid8"></div>
     <div class="ctrl">
       <div class="ctrl-l">
@@ -129,8 +129,8 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 
   <div id="results">
     <div id="results-head">
-      <div id="rlbl">Projected seats</div>
-      <button class="export-btn" onclick="exportCSV()">&darr; Export CSV</button>
+      <div id="rlbl">Election projection</div>
+      <button class="export-btn" onclick="exportCSV()">&darr; Export to CSV</button>
     </div>
     <div id="rgrid"></div>
   </div>
@@ -415,7 +415,7 @@ async function init() {
     const r = await fetchWithRetry(POLL_CSV);
     if (!r.ok) throw new Error('Poll fetch failed '+r.status);
     livePollMap = buildPollMap(parseCSV(await r.text()));
-    if (!livePollMap['GB-wide']) throw new Error('GB-wide row not found in polling CSV');
+    if (!livePollMap['GB-wide']) throw new Error('Internal error, please hold');
 
     showTab('gb');
     buildGBInputs();
@@ -425,7 +425,7 @@ async function init() {
 
     document.getElementById('loading').style.display='none';
     document.getElementById('wrap').style.display='block';
-    document.getElementById('status').textContent='Polling CSV loaded · run to update map';
+    document.getElementById('status').textContent='Britain Elects data loaded';
   } catch(e) {
     document.getElementById('loading').style.display='none';
     document.getElementById('error').style.display='block';
