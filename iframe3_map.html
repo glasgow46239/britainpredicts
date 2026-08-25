@@ -44,7 +44,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;
 
 /* ── Map container ── */
 #map-container{position:relative;width:100%;height:720px;}
-#map{position:absolute;top:0;left:0;bottom:0;width:calc(100% - 280px);transition:width .2s ease;}
+#map{position:absolute;top:0;left:0;right:0;bottom:0;}
 
 /* Flip legend */
 #flip-legend{position:absolute;left:10px;bottom:10px;z-index:15;background:rgba(255,255,255,.94);border:1px solid #ddd;border-radius:8px;padding:8px 10px;box-shadow:0 1px 5px rgba(0,0,0,.1);font-size:10px;color:#666;display:none;}
@@ -57,10 +57,11 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;
 .fl-flip{border:3px solid #111;}
 
 /* ── Side panel ── */
-#side-panel{position:absolute;top:0;right:0;width:280px;max-height:100%;background:#fff;border-left:1px solid #e5e5e5;border-bottom:1px solid #e5e5e5;display:flex;flex-direction:column;overflow:hidden;z-index:10;visibility:hidden;}
-#side-panel.is-visible{visibility:visible;}
-.panel-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:10px;color:#bbb;font-size:13px;text-align:center;}
-.panel-placeholder svg{opacity:.3;}
+/* A floating card over the map (like the legends/pin-indicator below), not
+   a docked column — it only ever occupies its own content height, so the
+   map keeps full width and isn't permanently notched for an empty column. */
+#side-panel{position:absolute;top:10px;right:10px;width:280px;max-height:calc(100% - 20px);background:#fff;border:1px solid #e5e5e5;border-radius:10px;box-shadow:0 2px 14px rgba(0,0,0,.16);display:flex;flex-direction:column;overflow:hidden;z-index:16;visibility:hidden;opacity:0;transition:opacity .12s ease,visibility .12s ease;}
+#side-panel.is-visible{visibility:visible;opacity:1;}
 
 /* Result bar */
 .result-bar{display:flex;align-items:stretch;height:32px;flex-shrink:0;}
@@ -165,14 +166,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;
   <div id="map"></div>
 
   <div id="side-panel">
-    <div class="panel-placeholder" id="panel-placeholder">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-        <circle cx="12" cy="9" r="2.5"/>
-      </svg>
-      <span>Hover a constituency to see the projected result</span>
-    </div>
-    <div id="panel-inner" style="display:none;flex-direction:column;">
+    <div id="panel-inner" style="display:flex;flex-direction:column;">
       <div class="result-bar">
         <div class="result-bar-incumbent" id="result-bar-incumbent"></div>
         <div class="result-bar-fill" id="result-bar-fill">
@@ -231,14 +225,14 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;
 // Lowercase keys to match STM model output
 // ============================================================
 const PARTIES = {
-  grn:  { label:'Green',        short:'Grn',    color:'#02A95B' },
-  lab:  { label:'Labour',       short:'Lab',    color:'#E4003B' },
-  snp:  { label:'SNP',          short:'SNP',    color:'#C8A400' },
-  pc:   { label:'Plaid Cymru',  short:'PC',     color:'#3F8428' },
-  ldem: { label:'Lib Dem',      short:'LDem',   color:'#FAA61A' },
-  oth:  { label:'Other',        short:'Oth',    color:'#57534e' },
-  con:  { label:'Conservative', short:'Con',    color:'#0087DC' },
-  ref:  { label:'Reform',       short:'Reform', color:'#12B6CF' },
+  grn:  { label:'Green',        short:'Grn',    color:'#5CBC4A' },
+  lab:  { label:'Labour',       short:'Lab',    color:'#D34C4C' },
+  snp:  { label:'SNP',          short:'SNP',    color:'#EEE03C' },
+  pc:   { label:'Plaid Cymru',  short:'PC',     color:'#469366' },
+  ldem: { label:'Lib Dem',      short:'LDem',   color:'#ebb82f' },
+  oth:  { label:'Other',        short:'Oth',    color:'#CCA7C6' },
+  con:  { label:'Conservative', short:'Con',    color:'#05718F' },
+  ref:  { label:'Reform',       short:'Reform', color:'#15B6C2' },
 };
 
 // Display order for stacked bars
@@ -849,11 +843,10 @@ function buildPanelBody(d){
 
 function showSidePanel(code){
   const d=DATA[code];if(!d)return;
-  document.getElementById('panel-placeholder').style.display='none';
-  const inner=document.getElementById('panel-inner');inner.style.display='flex';inner.style.flexDirection='column';
   updateResultBar(d);
   document.getElementById('panel-header').innerHTML='<div class="con-name">'+d.name+'</div><div class="con-region">'+d.region+'</div>';
   document.getElementById('panel-body').innerHTML=buildPanelBody(d);
+  document.getElementById('side-panel').classList.add('is-visible');
 }
 
 let drawerExpanded=false;
@@ -943,13 +936,13 @@ function initMap(geojsonData){
 
   function applyLayout(wide){
     isWide=wide;
+    // The map is always full-width now — the side panel floats over it as
+    // a card and only appears once something's actually hovered/pinned
+    // (see showSidePanel), so there's no permanently-reserved empty column.
     if(wide){
-      document.getElementById('map').style.width='calc(100% - 280px)';
-      sidePanel.style.display='flex';sidePanel.classList.add('is-visible');
       drawer.classList.remove('drawer-enabled');dismissDrawer();unpin();
     }else{
-      document.getElementById('map').style.width='100%';
-      sidePanel.style.display='none';sidePanel.classList.remove('is-visible');
+      sidePanel.classList.remove('is-visible');
       drawer.classList.add('drawer-enabled');
     }
     if(window._map)window._map.resize();
