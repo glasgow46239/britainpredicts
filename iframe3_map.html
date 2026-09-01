@@ -155,8 +155,8 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;
     <div id="flip-controls">
       <span class="vc-label">Highlight seats which changed hands</span>
       <div class="vc-seg">
-        <button class="vc-btn" data-flip="off">Off</button>
-        <button class="vc-btn active" data-flip="on">On</button>
+        <button class="vc-btn active" data-flip="off">Off</button>
+        <button class="vc-btn" data-flip="on">On</button>
       </div>
     </div>
   </div>
@@ -335,6 +335,12 @@ let AFFINITY       = DEFAULT_AFFINITY;
 let SEAT_INTENSITY = {};   // PCON24CD -> multiplier, from Tactical Intensity tab
 let TACTICAL_ENABLED = true;
 let GLOBAL_INTENSITY = 1;  // scenario slider from iframe2, default 1x
+// True once iframe2 has actually run a forecast with figures that differ
+// from the live Poll Tracker (iframe2 computes this precisely and sends it
+// on forecastUpdate) — threaded through into the seatCounts broadcast below
+// so iframe1's header can show "Your forecast" vs "The Britain Elects
+// forecast" without needing its own copy of the comparison logic.
+let IS_USER_PROJECTION = false;
 
 // ============================================================
 // CSV PARSER
@@ -639,7 +645,7 @@ function runModel() {
   // Broadcast to parent — iframe1 and iframe2 both receive this
   window.parent.postMessage({
     action: 'seatCounts', counts, withTactical, withoutTactical,
-    tacticalEnabled: savedEnabled,
+    tacticalEnabled: savedEnabled, isUserProjection: IS_USER_PROJECTION,
   }, '*');
 }
 
@@ -786,6 +792,7 @@ window.addEventListener('message', e => {
     POLL_MAP = e.data.pollMap;
     if (typeof e.data.tacticalEnabled === 'boolean') TACTICAL_ENABLED = e.data.tacticalEnabled;
     if (typeof e.data.tacticalIntensity === 'number' && !isNaN(e.data.tacticalIntensity)) GLOBAL_INTENSITY = e.data.tacticalIntensity;
+    IS_USER_PROJECTION = !!e.data.isUserProjection;
     runModel();
     // Re-render whatever view mode is currently active (Winner/Share/Swing),
     // not just the winner colours — a stale map used to snap back to Winner
@@ -880,12 +887,11 @@ function buildColorMatch(){
 
 function buildMapStyle(geojsonData){
   const colorMatch=buildColorMatch();
-  // Bake the default "Flipped seats: On" state straight into the initial
-  // style, same as colorMatch above — avoids a setPaintProperty call before
-  // the style has finished loading (see initChoropleth's applyFlips()).
-  const flipFillOpacity=buildFlipFillOpacityExpr();
-  const flipLineWidth=buildFlipLineWidthExpr();
-  const flipLineOpacity=buildFlipLineOpacityExpr();
+  // Flipped-seat highlighting defaults to Off, so the initial paint just
+  // uses the same flat constants as applyFlips()'s off branch — no need to
+  // bake a per-seat expression (or risk a setPaintProperty call before the
+  // style has loaded, see initChoropleth's applyFlips()) until the user
+  // actually switches it on.
   return{
     version:8,
     glyphs:'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
@@ -906,8 +912,8 @@ function buildMapStyle(geojsonData){
       {id:'railway',type:'line',source:'basemap','source-layer':'transportation',filter:['==',['get','class'],'rail'],paint:{'line-color':'hsl(34,12%,66%)','line-width':1,'line-opacity':0.7}},
       {id:'buildings',type:'fill',source:'basemap','source-layer':'building',minzoom:12,paint:{'fill-color':'rgba(185,176,169,1)','fill-opacity':0.9,'fill-outline-color':'rgba(165,156,148,1)'}},
       // Constituency fills
-      {id:'cons-fill',type:'fill',source:'cons',paint:{'fill-color':colorMatch,'fill-opacity':flipFillOpacity}},
-      {id:'cons-line',type:'line',source:'cons',paint:{'line-color':'#000000','line-width':flipLineWidth,'line-opacity':flipLineOpacity}},
+      {id:'cons-fill',type:'fill',source:'cons',paint:{'fill-color':colorMatch,'fill-opacity':0.55}},
+      {id:'cons-line',type:'line',source:'cons',paint:{'line-color':'#000000','line-width':0.6,'line-opacity':0.4}},
       // Hover overlay (brightens)
       {id:'cons-hover',type:'fill',source:'cons',paint:{'fill-color':colorMatch,'fill-opacity':['case',['boolean',['feature-state','hover'],false],0.3,0]}},
       // Pinned outline
@@ -959,6 +965,12 @@ function initMap(geojsonData){
   });
 
   const map=window._map;
+  // Rotation isn't useful for a GB choropleth and just risks users getting
+  // the map stuck at an odd angle — block every gesture that can rotate it
+  // (drag, touch-twist, keyboard) while leaving pan/zoom untouched.
+  map.dragRotate.disable();
+  map.touchZoomRotate.disableRotation();
+  map.keyboard.disableRotation();
   map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-left');
   map.addControl(new maplibregl.AttributionControl({compact:true}),'bottom-left');
   map.on('error',e=>console.warn('MapLibre:',e.error?.message||e));
@@ -1123,7 +1135,7 @@ function initChoropleth(map){
   const legendBinsRow=document.getElementById('legend-bins-row');
   const legendBinsLabels=document.querySelectorAll('#legend-bins-labels span');
   const flipLegend=document.getElementById('flip-legend');
-  let currentMode='winner',currentParty='lab',flipsOn=true;
+  let currentMode='winner',currentParty='lab',flipsOn=false;
 
   Object.entries(PARTIES).forEach(([key,p])=>{const opt=document.createElement('option');opt.value=key;opt.textContent=p.label;partySelect.appendChild(opt);});
   partySelect.value=currentParty;
@@ -1202,10 +1214,9 @@ function initChoropleth(map){
   // Re-apply whatever's currently active after a model re-run (forecastUpdate).
   window._refreshView=()=>applyMode(currentMode,currentParty);
 
-  // The initial paint already has flips baked in (see buildMapStyle) — this
-  // just syncs the legend's visibility to match, which is safe to touch
-  // immediately since it's a DOM class, not a map paint property.
-  flipLegend.classList.add('visible');
+  // Flipped seats default to Off (see buildMapStyle/flipsOn above), so the
+  // flip legend stays hidden until the user actually switches it on — no
+  // sync needed here, unlike when the default was On.
 }
 
 // ============================================================
