@@ -11,6 +11,13 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 #error   { padding:16px; color:#c00; font-size:12px; display:none; }
 #wrap    { display:none; background:#fff; }
 
+/* Same format/style as iframe2's header — swaps between the default
+   Britain Elects forecast and "Your forecast" once iframe3 reports back a
+   result computed from figures the user actually changed. */
+#header  { padding:0rem 0rem 0.5rem; border-bottom:1px solid #f0f0f0; }
+#header h2 { font-size:2rem; font-weight:700; color:#111; }
+#header p  { font-size:1rem; color:#888; margin-top:0.1875rem; }
+
 #tiles-wrap { padding:0; }
 .tiles   { display:grid; grid-template-columns:repeat(2,1fr); gap:0.5rem; }
 @media(min-width:480px){ .tiles { grid-template-columns:repeat(4,1fr); } }
@@ -54,6 +61,10 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 <div id="loading">Loading forecast…</div>
 <div id="error"></div>
 <div id="wrap">
+  <div id="header">
+    <h2 id="header-h2">The Britain Elects forecast</h2>
+    <p id="header-p">Based on the latest Poll Tracker figures</p>
+  </div>
   <div id="tiles-wrap"><div id="tiles" class="tiles"></div></div>
   <div id="load-status" class="load-status"></div>
   <div id="btns">
@@ -125,6 +136,14 @@ function updateToggleUI() {
   document.getElementById('toggle-knob').style.left = tacticalOn ? '18px' : '2px';
 }
 
+// isUserProjection comes straight from iframe3's seatCounts broadcast, which
+// threads through whatever iframe2 computed when the figures were run (see
+// iframe2's isUsingLiveDefaults()) — no need to duplicate that comparison here.
+function updateHeader(isUserProjection) {
+  document.getElementById('header-h2').textContent = isUserProjection ? 'Your forecast' : 'The Britain Elects forecast';
+  document.getElementById('header-p').textContent = isUserProjection ? 'Based on the numbers you entered' : 'Based on the latest Poll Tracker figures';
+}
+
 function displayForCurrentToggle() {
   const counts = tacticalOn ? (lastWith || lastCounts) : (lastWithout || lastCounts);
   if (counts) renderTiles(counts, false);
@@ -147,6 +166,7 @@ window.addEventListener('message', e => {
     lastWith = e.data.withTactical || null;
     lastWithout = e.data.withoutTactical || null;
     tacticalOn = (typeof e.data.tacticalEnabled === 'boolean') ? e.data.tacticalEnabled : true;
+    updateHeader(!!e.data.isUserProjection);
     if (!dataLoaded) {
       dataLoaded = true;
       document.getElementById('tactical-wrap').classList.remove('tactical-loading');
