@@ -7,52 +7,53 @@
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0;}
+html{font-size:16px;}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0;font-size:1rem;}
 
 /* ── Control bar ── */
-#control-bar{display:flex;flex-direction:column;gap:8px;padding:8px 10px;background:#fff;border-bottom:1px solid #ddd;}
-#control-row1{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
-#control-row2{display:flex;align-items:center;gap:8px;padding-left:2px;}
-@media(max-width:480px){#control-row1{gap:8px;}#view-controls{width:100%;}#search-wrap{max-width:100%;}}
-#search-wrap{flex:1;min-width:160px;max-width:320px;position:relative;}
-#search-input{width:100%;padding:7px 14px;border:1px solid #ddd;border-radius:6px;font-size:13px;font-family:inherit;background:#fff;outline:none;color:#222;}
+#control-bar{display:flex;flex-direction:column;gap:0.5rem;padding:0.5rem 0.625rem;background:#fff;border-bottom:1px solid #ddd;}
+#control-row1{display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;}
+#control-row2{display:flex;align-items:center;gap:0.5rem;padding-left:0.125rem;}
+@media(max-width:480px){#control-row1{gap:0.5rem;}#view-controls{width:100%;}#search-wrap{max-width:100%;}}
+#search-wrap{flex:1;min-width:10rem;max-width:20rem;position:relative;}
+#search-input{width:100%;padding:0.4375rem 0.875rem;border:1px solid #ddd;border-radius:0;font-size:0.8125rem;font-family:inherit;background:#fff;outline:none;color:#222;}
 #search-input:focus{border-color:#aaa;box-shadow:0 0 0 2px rgba(0,0,0,.06);}
 #search-input::placeholder{color:#bbb;}
-#search-results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid #e5e5e5;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;display:none;z-index:100;}
+#search-results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid #e5e5e5;border-radius:0;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:13.75rem;overflow-y:auto;display:none;z-index:100;}
 #search-results.open{display:block;}
-.search-result-item{padding:9px 14px;cursor:pointer;border-bottom:1px solid #f5f5f5;display:flex;align-items:center;gap:9px;}
+.search-result-item{padding:0.5625rem 0.875rem;cursor:pointer;border-bottom:1px solid #f5f5f5;display:flex;align-items:center;gap:0.5625rem;}
 .search-result-item:last-child{border-bottom:none;}
 .search-result-item:hover{background:#f8f8f7;}
-.search-result-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.search-result-dot{width:0.5625rem;height:0.5625rem;border-radius:50%;flex-shrink:0;}
 .search-result-text{flex:1;min-width:0;}
-.search-result-ward{font-size:13px;font-weight:500;color:#111;}
-.search-result-council{font-size:11px;color:#888;}
-.search-no-results{padding:12px 14px;font-size:12px;color:#aaa;text-align:center;}
+.search-result-ward{font-size:0.8125rem;font-weight:500;color:#111;}
+.search-result-council{font-size:0.6875rem;color:#888;}
+.search-no-results{padding:0.75rem 0.875rem;font-size:0.75rem;color:#aaa;text-align:center;}
 
 /* ── View controls ── */
-#view-controls{display:flex;align-items:center;gap:6px;font-size:11px;white-space:nowrap;flex-shrink:0;}
-.vc-label{color:#999;font-size:10px;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;}
-.vc-seg{display:flex;border:1px solid #e0e0e0;border-radius:12px;overflow:hidden;}
-.vc-btn{padding:3px 10px;font-size:11px;font-family:inherit;border:none;background:transparent;cursor:pointer;color:#555;transition:background .15s,color .15s;}
+#view-controls{display:flex;align-items:center;gap:0.375rem;font-size:0.6875rem;white-space:nowrap;flex-shrink:0;}
+.vc-label{color:#999;font-size:0.625rem;text-transform:uppercase;letter-spacing:.05em;flex-shrink:0;}
+.vc-seg{display:flex;border:1px solid #e0e0e0;border-radius:0;overflow:hidden;}
+.vc-btn{padding:0.1875rem 0.625rem;font-size:0.6875rem;font-family:inherit;border:none;background:transparent;cursor:pointer;color:#555;transition:background .15s,color .15s;}
 .vc-btn:hover{background:#f5f5f5;}
 .vc-btn.active{background:#222;color:#fff;}
-#party-select-wrap{display:none;align-items:center;gap:6px;}
+#party-select-wrap{display:none;align-items:center;gap:0.375rem;}
 #party-select-wrap.visible{display:flex;}
-#party-select{border:1px solid #e0e0e0;border-radius:12px;padding:3px 8px;font-size:11px;font-family:inherit;background:#fff;color:#333;cursor:pointer;outline:none;}
-#flip-controls{display:flex;align-items:center;gap:6px;}
+#party-select{border:1px solid #e0e0e0;border-radius:0;padding:0.1875rem 0.5rem;font-size:0.6875rem;font-family:inherit;background:#fff;color:#333;cursor:pointer;outline:none;}
+#flip-controls{display:flex;align-items:center;gap:0.375rem;}
 #flip-controls.hidden{display:none;}
 
 /* ── Map container ── */
-#map-container{position:relative;width:100%;height:720px;}
+#map-container{position:relative;width:100%;height:45rem;}
 #map{position:absolute;top:0;left:0;right:0;bottom:0;}
 
 /* Flip legend */
-#flip-legend{position:absolute;left:10px;bottom:10px;z-index:15;background:rgba(255,255,255,.94);border:1px solid #ddd;border-radius:8px;padding:8px 10px;box-shadow:0 1px 5px rgba(0,0,0,.1);font-size:10px;color:#666;display:none;}
+#flip-legend{position:absolute;left:0.625rem;bottom:0.625rem;z-index:15;background:rgba(255,255,255,.94);border:1px solid #ddd;border-radius:0;padding:0.5rem 0.625rem;box-shadow:0 1px 5px rgba(0,0,0,.1);font-size:0.625rem;color:#666;display:none;}
 #flip-legend.visible{display:block;}
-#flip-legend-title{font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#888;margin-bottom:6px;font-size:9px;}
-.fl-row{display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+#flip-legend-title{font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#888;margin-bottom:0.375rem;font-size:0.5625rem;}
+.fl-row{display:flex;align-items:center;gap:0.375rem;margin-bottom:0.1875rem;}
 .fl-row:last-child{margin-bottom:0;}
-.fl-swatch{width:16px;height:16px;border-radius:3px;background:#888;flex-shrink:0;}
+.fl-swatch{width:1rem;height:1rem;border-radius:0;background:#888;flex-shrink:0;}
 .fl-held{opacity:.35;border:1px solid #bbb;}
 .fl-flip{border:3px solid #111;}
 
@@ -60,74 +61,74 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;
 /* A floating card over the map (like the legends/pin-indicator below), not
    a docked column — it only ever occupies its own content height, so the
    map keeps full width and isn't permanently notched for an empty column. */
-#side-panel{position:absolute;top:10px;right:10px;width:280px;max-height:calc(100% - 20px);background:#fff;border:5px solid #fff;border-radius:0px;box-shadow:0 2px 14px rgba(0,0,0,.16);display:flex;flex-direction:column;overflow:hidden;z-index:16;visibility:hidden;opacity:0;transition:opacity .12s ease,visibility .12s ease;}
+#side-panel{position:absolute;top:0.625rem;right:0.625rem;width:17.5rem;max-height:calc(100% - 1.25rem);background:#fff;border:5px solid #fff;border-radius:0px;box-shadow:0 2px 14px rgba(0,0,0,.16);display:flex;flex-direction:column;overflow:hidden;z-index:16;visibility:hidden;opacity:0;transition:opacity .12s ease,visibility .12s ease;}
 #side-panel.is-visible{visibility:visible;opacity:1;}
 
 /* Result bar */
-.result-bar{display:flex;align-items:stretch;height:32px;flex-shrink:0;}
-.result-bar-incumbent{width:10px;flex-shrink:0;}
-.result-bar-fill{flex:1;display:flex;align-items:center;padding:0 10px;}
-.result-bar-text{font-size:11px;font-weight:600;text-transform:uppercase;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.result-bar{display:flex;align-items:stretch;height:2rem;flex-shrink:0;}
+.result-bar-incumbent{width:0.625rem;flex-shrink:0;}
+.result-bar-fill{flex:1;display:flex;align-items:center;padding:0 0.625rem;}
+.result-bar-text{font-size:0.6875rem;font-weight:600;text-transform:uppercase;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
 /* Panel header */
-.panel-header{padding:10px 10px 8px;border-bottom:1px solid #f0f0f0;flex-shrink:0;}
-.con-name{font-size:14px;font-weight:600;color:#111;line-height:1.2;}
-.con-region{font-size:12px;color:#777;margin-top:3px;}
-.panel-body{padding:10px;overflow-y:auto;flex:1;}
+.panel-header{padding:0.625rem 0.625rem 0.5rem;border-bottom:1px solid #f0f0f0;flex-shrink:0;}
+.con-name{font-size:0.875rem;font-weight:600;color:#111;line-height:1.2;}
+.con-region{font-size:0.75rem;color:#777;margin-top:0.1875rem;}
+.panel-body{padding:0.625rem;overflow-y:auto;flex:1;}
 
 /* Stacked bars */
-.stacked-section{margin-bottom:12px;}
-.stacked-label{font-size:10px;color:#aaa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
-.stacked-bar{display:flex;width:100%;height:15px;overflow:hidden;margin-bottom:2px;}
-.stacked-bar.previous{height:5px;opacity:1;margin-bottom:0;}
+.stacked-section{margin-bottom:0.75rem;}
+.stacked-label{font-size:0.625rem;color:#aaa;text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.25rem;}
+.stacked-bar{display:flex;width:100%;height:0.9375rem;overflow:hidden;margin-bottom:0.125rem;}
+.stacked-bar.previous{height:0.3125rem;opacity:1;margin-bottom:0;}
 
 /* Results table */
-.results-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
-.results-table thead th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#aaa;font-weight:400;padding:0 3px 7px;}
-.results-table thead th:first-child{text-align:left;width:95px;padding-left:0;}
-.results-table thead th:nth-child(2){text-align:right;width:38px;}
-.results-table thead th:nth-child(4){text-align:right;width:44px;}
+.results-table{width:100%;border-collapse:collapse;font-size:0.75rem;table-layout:fixed;}
+.results-table thead th{font-size:0.625rem;text-transform:uppercase;letter-spacing:.06em;color:#aaa;font-weight:400;padding:0 0.1875rem 0.4375rem;}
+.results-table thead th:first-child{text-align:left;width:5.9375rem;padding-left:0;}
+.results-table thead th:nth-child(2){text-align:right;width:2.375rem;}
+.results-table thead th:nth-child(4){text-align:right;width:2.75rem;}
 .results-table tbody tr{border-top:1px solid #f5f5f5;}
-.results-table tbody td{padding:0 3px;vertical-align:middle;}
+.results-table tbody td{padding:0 0.1875rem;vertical-align:middle;}
 .party-cell{display:flex;align-items:center;}
-.party-stripe{width:3px;height:21px;flex-shrink:0;}
-.party-name{font-size:12px;font-weight:400;color:#111;padding-left:8px;}
-.pct-cell{text-align:right;font-size:12px;font-weight:400;color:#111;font-variant-numeric:tabular-nums;}
-.bar-cell{padding:0 4px;}
-.bar-track{height:15px;background:#f0f0f0;overflow:hidden;}
+.party-stripe{width:0.1875rem;height:1.3125rem;flex-shrink:0;}
+.party-name{font-size:0.75rem;font-weight:400;color:#111;padding-left:0.5rem;}
+.pct-cell{text-align:right;font-size:0.75rem;font-weight:400;color:#111;font-variant-numeric:tabular-nums;}
+.bar-cell{padding:0 0.25rem;}
+.bar-track{height:0.9375rem;background:#f0f0f0;overflow:hidden;}
 .bar-fill{height:100%;}
-.chg-cell{text-align:right;font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.chg-cell{text-align:right;font-size:0.6875rem;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .chg-pos{color:#059669;}
 .chg-neg{color:#DC2626;}
 .chg-nil{color:#bbb;}
 
 /* ── Pin indicator ── */
-#pin-indicator{position:absolute;top:10px;left:50px;z-index:15;background:rgba(255,255,255,.94);border:1px solid #ddd;border-radius:20px;padding:5px 12px 5px 8px;font-size:11px;color:#333;display:none;align-items:center;gap:7px;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,.1);user-select:none;}
+#pin-indicator{position:absolute;top:0.625rem;left:3.125rem;z-index:15;background:rgba(255,255,255,.94);border:1px solid #ddd;border-radius:0;padding:0.3125rem 0.75rem 0.3125rem 0.5rem;font-size:0.6875rem;color:#333;display:none;align-items:center;gap:0.4375rem;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,.1);user-select:none;}
 #pin-indicator.active{display:flex;}
 #pin-indicator:hover{background:#f0f0f0;}
 
 /* ── Choropleth legend ── */
-#choropleth-legend{position:absolute;bottom:10px;left:10px;z-index:15;background:rgba(255,255,255,.94);border:1px solid #ddd;border-radius:8px;padding:8px 12px;box-shadow:0 1px 5px rgba(0,0,0,.1);display:none;flex-direction:column;gap:4px;min-width:140px;}
+#choropleth-legend{position:absolute;bottom:0.625rem;left:0.625rem;z-index:15;background:rgba(255,255,255,.94);border:1px solid #ddd;border-radius:0;padding:0.5rem 0.75rem;box-shadow:0 1px 5px rgba(0,0,0,.1);display:none;flex-direction:column;gap:0.25rem;min-width:8.75rem;}
 #choropleth-legend.visible{display:flex;}
-#legend-title{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:2px;}
-#legend-bins{display:none;flex-direction:column;gap:4px;}
+#legend-title{font-size:0.625rem;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:0.125rem;}
+#legend-bins{display:none;flex-direction:column;gap:0.25rem;}
 #legend-bins.visible{display:flex;}
-#legend-bins-row{display:flex;gap:2px;}
-#legend-bins-row .bin{width:18px;height:10px;border-radius:2px;}
-#legend-bins-labels{display:flex;justify-content:space-between;font-size:9px;color:#666;}
+#legend-bins-row{display:flex;gap:0.125rem;}
+#legend-bins-row .bin{width:1.125rem;height:0.625rem;border-radius:0;}
+#legend-bins-labels{display:flex;justify-content:space-between;font-size:0.5625rem;color:#666;}
 
 /* ── Mobile drawer ── */
 #drawer{position:absolute;bottom:0;left:0;right:0;z-index:20;background:#fff;border-top:1px solid #e5e5e5;transform:translateY(100%);transition:transform .3s ease;display:none;}
 #drawer.drawer-enabled{display:block;}
-#drawer-handle{display:flex;flex-direction:column;align-items:center;padding:10px 0;cursor:pointer;gap:5px;}
-#drawer-pip{width:36px;height:4px;border-radius:2px;background:#ddd;}
-#drawer-peek{display:flex;align-items:stretch;height:55px;overflow:hidden;margin-bottom:6px;}
-#drawer-toggle{flex-shrink:0;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.4);border-radius:20px;padding:3px 10px;cursor:pointer;background:rgba(0,0,0,.15);white-space:nowrap;}
+#drawer-handle{display:flex;flex-direction:column;align-items:center;padding:0.625rem 0;cursor:pointer;gap:0.3125rem;}
+#drawer-pip{width:2.25rem;height:0.25rem;border-radius:0;background:#ddd;}
+#drawer-peek{display:flex;align-items:stretch;height:3.4375rem;overflow:hidden;margin-bottom:0.375rem;}
+#drawer-toggle{flex-shrink:0;font-size:0.625rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.4);border-radius:0;padding:0.1875rem 0.625rem;cursor:pointer;background:rgba(0,0,0,.15);white-space:nowrap;}
 #drawer-toggle:hover{background:rgba(0,0,0,.25);}
-#drawer-body{padding:0 16px 24px;overflow-y:auto;max-height:55vh;display:none;}
+#drawer-body{padding:0 1rem 1.5rem;overflow-y:auto;max-height:55vh;display:none;}
 
 /* ── Attribution ── */
-.map-credit{font-size:11px;color:#aaa;text-align:center;padding:6px 0 10px;}
+.map-credit{font-size:0.6875rem;color:#aaa;text-align:center;padding:0.375rem 0 0.625rem;}
 .map-credit a{color:#aaa;}
 </style>
 </head>
@@ -193,7 +194,7 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;
   </div>
 
   <div id="pin-indicator" role="button" title="Click to unpin">
-    <span id="pin-dot" style="width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0;"></span>
+    <span id="pin-dot" style="width:0.5rem;height:0.5rem;border-radius:50%;display:inline-block;flex-shrink:0;"></span>
     <span id="pin-name"></span>
     <span style="color:#bbb;">&#10005;</span>
   </div>
@@ -203,11 +204,11 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;
       <div id="drawer-pip"></div>
     </div>
     <div id="drawer-peek">
-      <div id="drawer-peek-incumbent" style="width:8px;flex-shrink:0;align-self:stretch;"></div>
-      <div id="drawer-peek-fill" style="flex:1;display:flex;align-items:center;padding:0 10px;gap:8px;min-width:0;">
+      <div id="drawer-peek-incumbent" style="width:0.5rem;flex-shrink:0;align-self:stretch;"></div>
+      <div id="drawer-peek-fill" style="flex:1;display:flex;align-items:center;padding:0 0.625rem;gap:0.5rem;min-width:0;">
         <div style="flex:1;min-width:0;">
-          <div id="drawer-peek-label" style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#fff;line-height:1;margin-bottom:3px;"></div>
-          <div id="drawer-peek-name" style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+          <div id="drawer-peek-label" style="font-size:0.625rem;text-transform:uppercase;letter-spacing:.08em;color:#fff;line-height:1;margin-bottom:0.1875rem;"></div>
+          <div id="drawer-peek-name" style="font-size:0.8125rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
         </div>
         <button id="drawer-toggle">Details &#8593;</button>
       </div>
@@ -252,6 +253,13 @@ const OVERRIDE_URL= BASE + '322317408&single=true&output=csv';
 const STANDING_URL= BASE + '804182419&single=true&output=csv';
 const RESULTS_URL = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv';
 const GEO_URL     = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/parlcons_westmisnter.json';
+// Natural Earth 1:50m "urban areas" — generalised built-up-area polygons for
+// GB/Ireland, clipped from the public-domain Natural Earth dataset and
+// trimmed to ~26KB. Used purely as a low-zoom visual cue (see the
+// 'urban-areas' layer in buildMapStyle) so users can spot where the cities
+// are from a GB-wide view — OSM's own landuse/building polygons only start
+// rendering once you're zoomed into an individual seat.
+const URBAN_URL   = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/urban_areas.geojson';
 
 const NI_CODES = new Set(['N06000001','N06000002','N06000003','N06000004','N06000005','N06000006','N06000007','N06000008','N06000009','N06000010','N06000011','N06000012']);
 const WM = {Con:'con',Lab:'lab',LDem:'ldem',LD:'ldem',Grn:'grn',Green:'grn',SNP:'snp',PC:'pc',Reform:'ref',Ref:'ref',Ind:'oth',Other:'oth',Oth:'oth',Alba:'oth',Speaker:'oth',SDLP:'oth',UUP:'oth',DUP:'oth',SF:'oth',Alliance:'oth',APNI:'oth',TUV:'oth',RSTR:'oth'};
@@ -885,23 +893,34 @@ function buildColorMatch(){
   return expr;
 }
 
-function buildMapStyle(geojsonData){
+function buildMapStyle(geojsonData,urbanGeojson){
   const colorMatch=buildColorMatch();
   // Flipped-seat highlighting defaults to Off, so the initial paint just
   // uses the same flat constants as applyFlips()'s off branch — no need to
   // bake a per-seat expression (or risk a setPaintProperty call before the
   // style has loaded, see initChoropleth's applyFlips()) until the user
   // actually switches it on.
-  return{
-    version:8,
-    glyphs:'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-    sources:{
-      basemap:{type:'vector',url:'https://tiles.openfreemap.org/planet'},
-      cons:{type:'geojson',data:geojsonData,generateId:true},
-    },
-    layers:[
-      {id:'bg',type:'background',paint:{'background-color':'rgba(255,255,255,1)'}},
-      {id:'water',type:'fill',source:'basemap','source-layer':'water',paint:{'fill-color':'hsl(180,45%,97%)','fill-opacity':0.8}},
+  const sources={
+    basemap:{type:'vector',url:'https://tiles.openfreemap.org/planet'},
+    cons:{type:'geojson',data:geojsonData,generateId:true},
+  };
+  const layers=[
+    {id:'bg',type:'background',paint:{'background-color':'rgba(255,255,255,1)'}},
+    {id:'water',type:'fill',source:'basemap','source-layer':'water',paint:{'fill-color':'hsl(180,45%,97%)','fill-opacity':0.8}},
+  ];
+  // Built-up areas, from a bundled Natural Earth extract (see URBAN_URL) —
+  // OpenFreeMap's own landuse polygons only appear once you're zoomed into
+  // a seat, so this is what lets users spot where the cities are from a
+  // GB-wide view. It fades out by z9 as OSM's own landuse/building layers
+  // (below) take over, so built-up areas are never double-shaded.
+  if(urbanGeojson){
+    sources.urban={type:'geojson',data:urbanGeojson};
+    layers.push({id:'urban-areas',type:'fill',source:'urban',paint:{
+      'fill-color':'rgba(196,182,156,1)',
+      'fill-opacity':['interpolate',['linear'],['zoom'],4,0.55,7,0.5,9,0.15,10,0],
+    }});
+  }
+  layers.push(
       {id:'landcover-green',type:'fill',source:'basemap','source-layer':'landuse',filter:['in',['get','class'],['literal',['park','grass','cemetery','forest','meadow','nature_reserve']]],paint:{'fill-color':'hsl(82,46%,72%)','fill-opacity':0.5}},
       {id:'landuse-residential',type:'fill',source:'basemap','source-layer':'landuse',filter:['in',['get','class'],['literal',['residential','suburb','neighbourhood']]],paint:{'fill-color':'rgba(222,211,190,1)','fill-opacity':0.45}},
       {id:'road-path',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['path','track','service']]],paint:{'line-color':'rgba(200,195,185,1)','line-width':['interpolate',['linear'],['zoom'],13,0.4,17,1.2]}},
@@ -920,14 +939,19 @@ function buildMapStyle(geojsonData){
       {id:'cons-pinned',type:'line',source:'cons',paint:{'line-color':'#111111','line-width':2,'line-opacity':['case',['boolean',['feature-state','pinned'],false],1,0]}},
       // Place labels on top
       {id:'place-labels',type:'symbol',source:'basemap','source-layer':'place',filter:['in',['get','class'],['literal',['city','town','suburb','village']]],layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-size':['interpolate',['linear'],['zoom'],9,10,13,14],'text-anchor':'center','text-max-width':8},paint:{'text-color':'hsl(0,0%,25%)','text-halo-color':'hsla(0,0%,100%,0.85)','text-halo-width':2}},
-    ],
+  );
+  return{
+    version:8,
+    glyphs:'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+    sources,
+    layers,
   };
 }
 
 // ============================================================
 // MAP INIT
 // ============================================================
-function initMap(geojsonData){
+function initMap(geojsonData,urbanGeojson){
   const container=document.getElementById('map-container');
   const sidePanel=document.getElementById('side-panel');
   const drawer=document.getElementById('drawer');
@@ -958,7 +982,7 @@ function initMap(geojsonData){
 
   window._map=new maplibregl.Map({
     container:'map',
-    style:buildMapStyle(geojsonData),
+    style:buildMapStyle(geojsonData,urbanGeojson),
     center:[-2.5,54.5],
     zoom:5.2,
     attributionControl:false,
@@ -1262,26 +1286,35 @@ function initSearch(geojsonData,map,isWideFn){
 // ============================================================
 // BOOTSTRAP
 // ============================================================
-async function bootstrap(){
-  await loadData();
-
-  // Try to fetch GeoJSON with proxy fallback
-  let geojsonData=null;
+async function fetchJSONWithProxyFallback(url,minLength){
   const proxies=[u=>u,u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?'+encodeURIComponent(u)];
   for(const proxy of proxies){
     try{
-      const r=await fetch(proxy(GEO_URL),{signal:AbortSignal.timeout(20000)});
-      if(r.ok){const t=await r.text();if(t.length>1000){geojsonData=JSON.parse(t);break;}}
+      const r=await fetch(proxy(url),{signal:AbortSignal.timeout(20000)});
+      if(r.ok){const t=await r.text();if(t.length>minLength){return JSON.parse(t);}}
     }catch(e){}
   }
+  return null;
+}
+
+async function bootstrap(){
+  await loadData();
+
+  // The constituency boundaries are required — without them there's no map.
+  // The urban-areas overlay is decorative-only, so it's fetched the same way
+  // but its failure never blocks the map from loading.
+  const [geojsonData,urbanGeojson]=await Promise.all([
+    fetchJSONWithProxyFallback(GEO_URL,1000),
+    fetchJSONWithProxyFallback(URBAN_URL,100).catch(()=>null),
+  ]);
 
   if(!geojsonData){
-    document.getElementById('map').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12px;color:#aaa;text-align:center;padding:24px;">Map loads when hosted on GitHub Pages.<br>CORS restriction prevents loading in sandbox preview.</div>';
+    document.getElementById('map').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:0.75rem;color:#aaa;text-align:center;padding:1.5rem;">Map loads when hosted on GitHub Pages.<br>CORS restriction prevents loading in sandbox preview.</div>';
     return;
   }
 
   // Filter out NI from GeoJSON (greyed via colour match but still present for context)
-  initMap(geojsonData);
+  initMap(geojsonData,urbanGeojson);
 }
 
 bootstrap();
