@@ -253,13 +253,6 @@ const OVERRIDE_URL= BASE + '322317408&single=true&output=csv';
 const STANDING_URL= BASE + '804182419&single=true&output=csv';
 const RESULTS_URL = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/results_2024.csv';
 const GEO_URL     = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/parlcons_westmisnter.json';
-// Natural Earth 1:50m "urban areas" — generalised built-up-area polygons for
-// GB/Ireland, clipped from the public-domain Natural Earth dataset and
-// trimmed to ~26KB. Used purely as a low-zoom visual cue (see the
-// 'urban-areas' layer in buildMapStyle) so users can spot where the cities
-// are from a GB-wide view — OSM's own landuse/building polygons only start
-// rendering once you're zoomed into an individual seat.
-const URBAN_URL   = 'https://raw.githubusercontent.com/glasgow46239/britainpredicts/main/urban_areas.geojson';
 
 const NI_CODES = new Set(['N06000001','N06000002','N06000003','N06000004','N06000005','N06000006','N06000007','N06000008','N06000009','N06000010','N06000011','N06000012']);
 const WM = {Con:'con',Lab:'lab',LDem:'ldem',LD:'ldem',Grn:'grn',Green:'grn',SNP:'snp',PC:'pc',Reform:'ref',Ref:'ref',Ind:'oth',Other:'oth',Oth:'oth',Alba:'oth',Speaker:'oth',SDLP:'oth',UUP:'oth',DUP:'oth',SF:'oth',Alliance:'oth',APNI:'oth',TUV:'oth',RSTR:'oth'};
@@ -893,34 +886,23 @@ function buildColorMatch(){
   return expr;
 }
 
-function buildMapStyle(geojsonData,urbanGeojson){
+function buildMapStyle(geojsonData){
   const colorMatch=buildColorMatch();
   // Flipped-seat highlighting defaults to Off, so the initial paint just
   // uses the same flat constants as applyFlips()'s off branch — no need to
   // bake a per-seat expression (or risk a setPaintProperty call before the
   // style has loaded, see initChoropleth's applyFlips()) until the user
   // actually switches it on.
-  const sources={
-    basemap:{type:'vector',url:'https://tiles.openfreemap.org/planet'},
-    cons:{type:'geojson',data:geojsonData,generateId:true},
-  };
-  const layers=[
-    {id:'bg',type:'background',paint:{'background-color':'rgba(255,255,255,1)'}},
-    {id:'water',type:'fill',source:'basemap','source-layer':'water',paint:{'fill-color':'hsl(180,45%,97%)','fill-opacity':0.8}},
-  ];
-  // Built-up areas, from a bundled Natural Earth extract (see URBAN_URL) —
-  // OpenFreeMap's own landuse polygons only appear once you're zoomed into
-  // a seat, so this is what lets users spot where the cities are from a
-  // GB-wide view. It fades out by z9 as OSM's own landuse/building layers
-  // (below) take over, so built-up areas are never double-shaded.
-  if(urbanGeojson){
-    sources.urban={type:'geojson',data:urbanGeojson};
-    layers.push({id:'urban-areas',type:'fill',source:'urban',paint:{
-      'fill-color':'rgba(196,182,156,1)',
-      'fill-opacity':['interpolate',['linear'],['zoom'],4,0.55,7,0.5,9,0.15,10,0],
-    }});
-  }
-  layers.push(
+  return{
+    version:8,
+    glyphs:'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+    sources:{
+      basemap:{type:'vector',url:'https://tiles.openfreemap.org/planet'},
+      cons:{type:'geojson',data:geojsonData,generateId:true},
+    },
+    layers:[
+      {id:'bg',type:'background',paint:{'background-color':'rgba(255,255,255,1)'}},
+      {id:'water',type:'fill',source:'basemap','source-layer':'water',paint:{'fill-color':'hsl(180,45%,97%)','fill-opacity':0.8}},
       {id:'landcover-green',type:'fill',source:'basemap','source-layer':'landuse',filter:['in',['get','class'],['literal',['park','grass','cemetery','forest','meadow','nature_reserve']]],paint:{'fill-color':'hsl(82,46%,72%)','fill-opacity':0.5}},
       {id:'landuse-residential',type:'fill',source:'basemap','source-layer':'landuse',filter:['in',['get','class'],['literal',['residential','suburb','neighbourhood']]],paint:{'fill-color':'rgba(222,211,190,1)','fill-opacity':0.45}},
       {id:'road-path',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['path','track','service']]],paint:{'line-color':'rgba(200,195,185,1)','line-width':['interpolate',['linear'],['zoom'],13,0.4,17,1.2]}},
@@ -929,29 +911,32 @@ function buildMapStyle(geojsonData,urbanGeojson){
       {id:'road-primary',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['primary']]],paint:{'line-color':'rgba(188,178,160,1)','line-width':['interpolate',['linear'],['zoom'],8,0.8,14,4]}},
       {id:'road-motorway',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['motorway','trunk']]],paint:{'line-color':'rgba(175,165,145,1)','line-width':['interpolate',['linear'],['zoom'],6,1,14,5]}},
       {id:'railway',type:'line',source:'basemap','source-layer':'transportation',filter:['==',['get','class'],'rail'],paint:{'line-color':'hsl(34,12%,66%)','line-width':1,'line-opacity':0.7}},
-      {id:'buildings',type:'fill',source:'basemap','source-layer':'building',minzoom:12,paint:{'fill-color':'rgba(185,176,169,1)','fill-opacity':0.9,'fill-outline-color':'rgba(165,156,148,1)'}},
       // Constituency fills
       {id:'cons-fill',type:'fill',source:'cons',paint:{'fill-color':colorMatch,'fill-opacity':0.55}},
       {id:'cons-line',type:'line',source:'cons',paint:{'line-color':'#000000','line-width':0.6,'line-opacity':0.4}},
+      // Buildings, drawn OVER the ward colour (not under it) as a dark,
+      // semi-transparent overlay — this is what gives the "shadowed"
+      // built-up texture from the reference image, reading through
+      // whatever colour the seat is painted rather than being washed out
+      // by it. Fades in by zoom so it doesn't pop in abruptly at minzoom.
+      {id:'buildings',type:'fill',source:'basemap','source-layer':'building',minzoom:12,paint:{
+        'fill-color':'#1a1410',
+        'fill-opacity':['interpolate',['linear'],['zoom'],12,0,13,0.35,16,0.45],
+      }},
       // Hover overlay (brightens)
       {id:'cons-hover',type:'fill',source:'cons',paint:{'fill-color':colorMatch,'fill-opacity':['case',['boolean',['feature-state','hover'],false],0.3,0]}},
       // Pinned outline
       {id:'cons-pinned',type:'line',source:'cons',paint:{'line-color':'#111111','line-width':2,'line-opacity':['case',['boolean',['feature-state','pinned'],false],1,0]}},
       // Place labels on top
       {id:'place-labels',type:'symbol',source:'basemap','source-layer':'place',filter:['in',['get','class'],['literal',['city','town','suburb','village']]],layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-size':['interpolate',['linear'],['zoom'],9,10,13,14],'text-anchor':'center','text-max-width':8},paint:{'text-color':'hsl(0,0%,25%)','text-halo-color':'hsla(0,0%,100%,0.85)','text-halo-width':2}},
-  );
-  return{
-    version:8,
-    glyphs:'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-    sources,
-    layers,
+    ],
   };
 }
 
 // ============================================================
 // MAP INIT
 // ============================================================
-function initMap(geojsonData,urbanGeojson){
+function initMap(geojsonData){
   const container=document.getElementById('map-container');
   const sidePanel=document.getElementById('side-panel');
   const drawer=document.getElementById('drawer');
@@ -982,7 +967,7 @@ function initMap(geojsonData,urbanGeojson){
 
   window._map=new maplibregl.Map({
     container:'map',
-    style:buildMapStyle(geojsonData,urbanGeojson),
+    style:buildMapStyle(geojsonData),
     center:[-2.5,54.5],
     zoom:5.2,
     attributionControl:false,
@@ -1266,7 +1251,12 @@ function initSearch(geojsonData,map,isWideFn){
   function selectEntry(entry){
     input.value=entry.name;closeResults();
     const bounds=boundsByCode[entry.code];
-    if(bounds&&map)map.fitBounds(bounds,{padding:80,maxZoom:10,duration:600});
+    // maxZoom was 10 — below the buildings layer's minzoom of 12, so
+    // searching a seat never zoomed in far enough to ever show building
+    // texture. 14 keeps the whole constituency in view for larger/rural
+    // seats (fitBounds only zooms this far in when the seat is small
+    // enough to need it) while letting compact urban ones show buildings.
+    if(bounds&&map)map.fitBounds(bounds,{padding:80,maxZoom:14,duration:600});
     if(isWideFn())showSidePanel(entry.code);else showDrawer(entry.code);
   }
 
@@ -1286,27 +1276,18 @@ function initSearch(geojsonData,map,isWideFn){
 // ============================================================
 // BOOTSTRAP
 // ============================================================
-async function fetchJSONWithProxyFallback(url,minLength){
-  const proxies=[u=>u,u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?'+encodeURIComponent(u)];
-  for(const proxy of proxies){
-    try{
-      const r=await fetch(proxy(url),{signal:AbortSignal.timeout(20000)});
-      if(r.ok){const t=await r.text();if(t.length>minLength){return JSON.parse(t);}}
-    }catch(e){}
-  }
-  return null;
-}
-
 async function bootstrap(){
   await loadData();
 
-  // The constituency boundaries are required — without them there's no map.
-  // The urban-areas overlay is decorative-only, so it's fetched the same way
-  // but its failure never blocks the map from loading.
-  const [geojsonData,urbanGeojson]=await Promise.all([
-    fetchJSONWithProxyFallback(GEO_URL,1000),
-    fetchJSONWithProxyFallback(URBAN_URL,100).catch(()=>null),
-  ]);
+  // Try to fetch GeoJSON with proxy fallback
+  let geojsonData=null;
+  const proxies=[u=>u,u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?'+encodeURIComponent(u)];
+  for(const proxy of proxies){
+    try{
+      const r=await fetch(proxy(GEO_URL),{signal:AbortSignal.timeout(20000)});
+      if(r.ok){const t=await r.text();if(t.length>1000){geojsonData=JSON.parse(t);break;}}
+    }catch(e){}
+  }
 
   if(!geojsonData){
     document.getElementById('map').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:0.75rem;color:#aaa;text-align:center;padding:1.5rem;">Map loads when hosted on GitHub Pages.<br>CORS restriction prevents loading in sandbox preview.</div>';
@@ -1314,7 +1295,7 @@ async function bootstrap(){
   }
 
   // Filter out NI from GeoJSON (greyed via colour match but still present for context)
-  initMap(geojsonData,urbanGeojson);
+  initMap(geojsonData);
 }
 
 bootstrap();
