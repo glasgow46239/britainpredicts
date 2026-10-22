@@ -8,7 +8,7 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{font-size:16px;}
-body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0;font-size:1rem;}
+body{font-family: var(--be-font, 'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif);background:#f5f5f5;margin:0;font-size:1rem;}
 
 /* ── Control bar ── */
 #control-bar{display:flex;flex-direction:column;gap:0.5rem;padding:0.5rem 0.625rem;background:#fff;border-bottom:1px solid #ddd;}
@@ -131,6 +131,8 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;
 .map-credit{font-size:0.6875rem;color:#aaa;text-align:center;padding:0.375rem 0 0.625rem;}
 .map-credit a{color:#aaa;}
 </style>
+  <link rel="stylesheet" href="https://glasgow46239.github.io/style/be.css">
+  <link rel="stylesheet" href="https://glasgow46239.github.io/style/be-map.css">
 </head>
 <body>
 <div id="control-bar">
@@ -824,13 +826,9 @@ function stackedBarHTML(shares, cls){
 }
 
 function updateResultBar(d){
-  const winner=PARTIES[d.winner]||PARTIES.oth;
-  const incumbent=PARTIES[d.defender]||winner;
-  const held=d.winner===d.defender;
-  const label=held?winner.label+' hold':winner.label+' gain from '+incumbent.label;
-  document.getElementById('result-bar-incumbent').style.background=incumbent.color;
-  document.getElementById('result-bar-fill').style.background=winner.color;
-  document.getElementById('result-bar-text').textContent=label;
+  // House result line and top rule (glasgow46239.github.io/style): '■ CON GAIN FROM ■ LAB'
+  const names={};Object.keys(PARTIES).forEach(k=>{names[k]=PARTIES[k].label;});
+  BE.setResult(document.getElementById('side-panel'),d.winner||'oth',d.defender||d.winner||'oth',names);
 }
 
 function buildPanelBody(d){
