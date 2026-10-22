@@ -120,6 +120,7 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
   </div>
   <div id="status"></div>
 </div>
+<script src="https://glasgow46239.github.io/style/be.js"></script>
 <script>
 const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQW16UGOaAXAU_5uJMfFYEget3SV4u1qklugRW17lNCAIPUKoGLcqoJNGdXkQU6LqGluamK-EDq1eWQ/pub?gid=';
 const POLL_CSV = BASE_URL + '0&single=true&output=csv';
@@ -127,7 +128,7 @@ const PARTIES = ['con','lab','ldem','grn','ref','oth','snp','pc']; // snp/pc las
 const GB_MAIN_PARTIES = ['con','lab','ldem','grn','ref','oth']; // snp/pc use their own regional base on the GB-wide tab
 const REGIONS  = ['Scotland','Wales','Northern England','Southern England','Midlands','London'];
 const LABELS   = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Ref',oth:'Ind'};
-const COLOURS  = {con:'#05718F',lab:'#D34C4C',ldem:'#EBB82F',grn:'#5CBC4A',snp:'#EEE03C',pc:'#469366',ref:'#15B6C2',oth:'#CCA7C6'};
+const COLOURS = BE.colours(['con','lab','ldem','grn','snp','pc','ref','oth']); // central style guide: glasgow46239.github.io/style
 const ALPHA    = {con:0,lab:0,ldem:0,grn:0,snp:.48,pc:0,ref:0,oth:0};
 const S24      = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
 let livePollMap = {};
