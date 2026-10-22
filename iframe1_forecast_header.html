@@ -6,7 +6,7 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 html { font-size:16px; }
-body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff; }
+body { font-family: var(--be-font, 'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif); background:#fff; }
 #loading { padding:24px; color:#999; font-size:13px; text-align:center; }
 #error   { padding:16px; color:#c00; font-size:12px; display:none; }
 #wrap    { display:none; background:#fff; }
@@ -56,6 +56,7 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 .toggle         { width:2.375rem; height:1.375rem; border-radius:0.6875rem; position:relative; transition:background .15s; flex-shrink:0; }
 .toggle-knob    { position:absolute; top:2px; width:1.125rem; height:1.125rem; border-radius:50%; background:#fff; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.25); }
 </style>
+  <link rel="stylesheet" href="https://glasgow46239.github.io/style/be.css">
 </head>
 <body>
 <div id="loading">Loading forecast…</div>

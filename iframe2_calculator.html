@@ -6,7 +6,7 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 html { font-size:16px; }
-body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff; font-size:1rem; }
+body { font-family: var(--be-font, 'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif); background:#fff; font-size:1rem; }
 #loading { padding:24px; color:#999; text-align:center; }
 #error   { padding:16px; color:#c00; font-size:12px; display:none; }
 #wrap    { display:none; }
@@ -61,6 +61,7 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
 .r-label { font-size:2rem; font-weight:700; letter-spacing:.03em; text-transform:uppercase; text-align:right; }
 #status  { font-size:0.75rem; color:#ccc; text-align:right; padding:0.5rem 0rem 0rem 0rem; }
 </style>
+  <link rel="stylesheet" href="https://glasgow46239.github.io/style/be.css">
 </head>
 <body>
 <div id="loading">Loading…</div>
