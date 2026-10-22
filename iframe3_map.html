@@ -220,20 +220,21 @@ body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:#f5f5f5;
 <p class="map-credit">Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors &middot; Tiles by <a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> &middot; Britain Predicts</p>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://glasgow46239.github.io/style/be.js"></script>
 <script>
 // ============================================================
 // PARTY DEFINITIONS
 // Lowercase keys to match STM model output
 // ============================================================
 const PARTIES = {
-  grn:  { label:'Green',        short:'Grn',    color:'#5CBC4A' },
-  lab:  { label:'Labour',       short:'Lab',    color:'#D34C4C' },
-  snp:  { label:'SNP',          short:'SNP',    color:'#EEE03C' },
-  pc:   { label:'Plaid Cymru',  short:'PC',     color:'#469366' },
-  ldem: { label:'Lib Dem',      short:'LDem',   color:'#ebb82f' },
-  oth:  { label:'Other',        short:'Oth',    color:'#CCA7C6' },
-  con:  { label:'Conservative', short:'Con',    color:'#05718F' },
-  ref:  { label:'Reform',       short:'Reform', color:'#15B6C2' },
+  grn: { label:'Green',        short:'Grn',    color:BE.fill('grn') },
+  lab: { label:'Labour',       short:'Lab',    color:BE.fill('lab') },
+  snp: { label:'SNP',          short:'SNP',    color:BE.fill('snp') },
+  pc: { label:'Plaid Cymru',  short:'PC',     color:BE.fill('pc') },
+  ldem: { label:'Lib Dem',      short:'LDem',   color:BE.fill('ldem') },
+  oth: { label:'Other',        short:'Oth',    color:BE.fill('oth') },
+  con: { label:'Conservative', short:'Con',    color:BE.fill('con') },
+  ref: { label:'Reform',       short:'Reform', color:BE.fill('ref') },
 };
 
 // Display order for stacked bars
@@ -1078,8 +1079,8 @@ function buildChoroplethExpr(partyKey,ceiling){
 // reading an exact number off a continuous ramp. Bins standardised to 5pt
 // steps out to ±20pt; no separate "flat" bucket — the near-zero bin just
 // falls out of the same tint blend used for the rest of the scale.
-const SWING_NEG = '#d45a49';
-const SWING_POS = '#009076';
+const SWING_NEG = BE.signal('negative');
+const SWING_POS = BE.signal('positive');
 const SWING_BREAKS = [-20,-15,-10,-5,5,10,15,20];
 const SWING_BINS = SWING_BREAKS.map((max,i)=>{
   const mid = i===0 ? max : (SWING_BREAKS[i-1]+max)/2;

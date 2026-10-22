@@ -82,13 +82,14 @@ body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; background:#fff;
     </div>
   </div>
 </div>
+<script src="https://glasgow46239.github.io/style/be.js"></script>
 <script>
 // iframe1 is a DISPLAY ONLY layer.
 // It receives seat counts (and a with/without-tactical pair for the local
 // flick toggle) from iframe3 via the parent relay. It runs no model itself.
 
 const LABELS  = {con:'Con',lab:'Lab',ldem:'LDem',grn:'Grn',snp:'SNP',pc:'PC',ref:'Ref',oth:'Ind'};
-const COLOURS = {con:'#05718F',lab:'#D34C4C',ldem:'#EBB82F',grn:'#5CBC4A',snp:'#EEE03C',pc:'#469366',ref:'#15B6C2',oth:'#CCA7C6'};
+const COLOURS = BE.colours(['con','lab','ldem','grn','snp','pc','ref','oth']); // central style guide: glasgow46239.github.io/style
 const ALPHA   = {con:0,lab:0,ldem:0,grn:0,snp:0.48,pc:0,ref:0,oth:0};
 const S24     = {con:121,lab:412,ldem:72,grn:4,snp:9,pc:4,ref:5,oth:5};
 
