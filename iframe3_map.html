@@ -223,6 +223,7 @@ body{font-family: var(--be-font, 'IBM Plex Sans', 'Helvetica Neue', Helvetica, A
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://glasgow46239.github.io/style/be.js"></script>
+<script src="https://glasgow46239.github.io/style/be-basemap.js"></script>
 <script>
 // ============================================================
 // PARTY DEFINITIONS
@@ -892,44 +893,18 @@ function buildMapStyle(geojsonData){
   // bake a per-seat expression (or risk a setPaintProperty call before the
   // style has loaded, see initChoropleth's applyFlips()) until the user
   // actually switches it on.
-  return{
-    version:8,
-    glyphs:'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
-    sources:{
-      basemap:{type:'vector',url:'https://tiles.openfreemap.org/planet'},
-      cons:{type:'geojson',data:geojsonData,generateId:true},
-    },
+  // House base map (glasgow46239.github.io/style/be-basemap.js) beneath the seat layers, labels on top
+  return BE.basemap.style({
+    sources:{cons:{type:'geojson',data:geojsonData,generateId:true}},
     layers:[
-      {id:'bg',type:'background',paint:{'background-color':'rgba(255,255,255,1)'}},
-      {id:'water',type:'fill',source:'basemap','source-layer':'water',paint:{'fill-color':'hsl(180,45%,97%)','fill-opacity':0.8}},
-      {id:'landcover-green',type:'fill',source:'basemap','source-layer':'landuse',filter:['in',['get','class'],['literal',['park','grass','cemetery','forest','meadow','nature_reserve']]],paint:{'fill-color':'hsl(82,46%,72%)','fill-opacity':0.5}},
-      {id:'landuse-residential',type:'fill',source:'basemap','source-layer':'landuse',filter:['in',['get','class'],['literal',['residential','suburb','neighbourhood']]],paint:{'fill-color':'rgba(222,211,190,1)','fill-opacity':0.45}},
-      {id:'road-path',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['path','track','service']]],paint:{'line-color':'rgba(200,195,185,1)','line-width':['interpolate',['linear'],['zoom'],13,0.4,17,1.2]}},
-      {id:'road-minor',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['minor','residential']]],paint:{'line-color':'rgba(210,205,192,1)','line-width':['interpolate',['linear'],['zoom'],11,0.4,15,2]}},
-      {id:'road-secondary',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['secondary','tertiary']]],paint:{'line-color':'rgba(200,193,178,1)','line-width':['interpolate',['linear'],['zoom'],9,0.5,14,3]}},
-      {id:'road-primary',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['primary']]],paint:{'line-color':'rgba(188,178,160,1)','line-width':['interpolate',['linear'],['zoom'],8,0.8,14,4]}},
-      {id:'road-motorway',type:'line',source:'basemap','source-layer':'transportation',filter:['in',['get','class'],['literal',['motorway','trunk']]],paint:{'line-color':'rgba(175,165,145,1)','line-width':['interpolate',['linear'],['zoom'],6,1,14,5]}},
-      {id:'railway',type:'line',source:'basemap','source-layer':'transportation',filter:['==',['get','class'],'rail'],paint:{'line-color':'hsl(34,12%,66%)','line-width':1,'line-opacity':0.7}},
-      // Constituency fills
-      {id:'cons-fill',type:'fill',source:'cons',paint:{'fill-color':colorMatch,'fill-opacity':0.55}},
-      {id:'cons-line',type:'line',source:'cons',paint:{'line-color':'#000000','line-width':0.6,'line-opacity':0.4}},
-      // Buildings, drawn OVER the ward colour (not under it) as a dark,
-      // semi-transparent overlay — this is what gives the "shadowed"
-      // built-up texture from the reference image, reading through
-      // whatever colour the seat is painted rather than being washed out
-      // by it. Fades in by zoom so it doesn't pop in abruptly at minzoom.
-      {id:'buildings',type:'fill',source:'basemap','source-layer':'building',minzoom:12,paint:{
-        'fill-color':'#1a1410',
-        'fill-opacity':['interpolate',['linear'],['zoom'],12,0,13,0.35,16,0.45],
-      }},
+      // Seat fills: 66%, dropping to 33% on the clicked seat so its streets show through
+      {id:'cons-fill',type:'fill',source:'cons',paint:{'fill-color':colorMatch,'fill-opacity':BE.basemap.fillOpacity()}},
+      {id:'cons-line',type:'line',source:'cons',paint:BE.basemap.boundary()},
       // Hover overlay (brightens)
       {id:'cons-hover',type:'fill',source:'cons',paint:{'fill-color':colorMatch,'fill-opacity':['case',['boolean',['feature-state','hover'],false],0.3,0]}},
-      // Pinned outline
-      {id:'cons-pinned',type:'line',source:'cons',paint:{'line-color':'#111111','line-width':2,'line-opacity':['case',['boolean',['feature-state','pinned'],false],1,0]}},
-      // Place labels on top
-      {id:'place-labels',type:'symbol',source:'basemap','source-layer':'place',filter:['in',['get','class'],['literal',['city','town','suburb','village']]],layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-size':['interpolate',['linear'],['zoom'],9,10,13,14],'text-anchor':'center','text-max-width':8},paint:{'text-color':'hsl(0,0%,25%)','text-halo-color':'hsla(0,0%,100%,0.85)','text-halo-width':2}},
+      {id:'cons-pinned',type:'line',source:'cons',paint:BE.basemap.pinnedLine()},
     ],
-  };
+  });
 }
 
 // ============================================================
@@ -940,13 +915,33 @@ function initMap(geojsonData){
   const sidePanel=document.getElementById('side-panel');
   const drawer=document.getElementById('drawer');
   const pinEl=document.getElementById('pin-indicator');
-  let isWide=false,hoveredId=null,pinnedId=null;
+  let isWide=false,hoveredId=null,pinnedId=null,pinnedCode=null;
 
   function unpin(){
     if(pinnedId!==null&&window._map)window._map.setFeatureState({source:'cons',id:pinnedId},{pinned:false});
-    pinnedId=null;pinEl.classList.remove('active');
+    pinnedId=null;pinnedCode=null;pinEl.classList.remove('active');sidePanel.classList.remove('bm-pinned');
   }
   pinEl.addEventListener('click',unpin);
+
+  // Click reveal tools: magnifier (zoom to the seat) and close, plus Escape
+  function closeResult(){unpin();sidePanel.classList.remove('be-has-result');dismissDrawer();}
+  function pinSeat(code){
+    const map=window._map;const fid=geojsonData.features.findIndex(f=>f.properties&&f.properties.PCON24CD===code);
+    if(!map||fid<0)return;
+    if(pinnedId!==null)map.setFeatureState({source:'cons',id:pinnedId},{pinned:false});
+    if(hoveredId!==null){map.setFeatureState({source:'cons',id:hoveredId},{hover:false});hoveredId=null;}
+    pinnedId=fid;pinnedCode=code;map.setFeatureState({source:'cons',id:fid},{pinned:true});
+    const d=DATA[code];
+    if(isWide&&d){const p=PARTIES[d.winner]||PARTIES.oth;document.getElementById('pin-dot').style.background=p.color;document.getElementById('pin-name').textContent=d.name;pinEl.classList.add('active');sidePanel.classList.add('bm-pinned');}
+  }
+  window.__bmPinSeat=pinSeat;
+  function zoomToSeat(){
+    const f=pinnedCode&&geojsonData.features.find(x=>x.properties&&x.properties.PCON24CD===pinnedCode);
+    const b=BE.basemap.bounds(f);if(!b||!window._map)return;
+    const right=isWide?sidePanel.getBoundingClientRect().width+30:30;
+    window._map.fitBounds(b,{padding:{top:40,bottom:isWide?40:160,left:40,right},maxZoom:14,duration:900});
+  }
+  BE.basemap.panelTools({panel:sidePanel,drawerSlot:document.getElementById('drawer-peek-fill'),zoomLabel:'Zoom to this seat',onZoom:zoomToSeat,onClose:closeResult});
 
   function applyLayout(wide){
     isWide=wide;
@@ -1017,10 +1012,13 @@ function initMap(geojsonData){
         if(pinnedId===fid){unpin();return;}
         if(pinnedId!==null)map.setFeatureState({source:'cons',id:pinnedId},{pinned:false});
         if(hoveredId!==null){map.setFeatureState({source:'cons',id:hoveredId},{hover:false});hoveredId=null;}
-        pinnedId=fid;map.setFeatureState({source:'cons',id:pinnedId},{pinned:true});
+        pinnedId=fid;pinnedCode=code;map.setFeatureState({source:'cons',id:pinnedId},{pinned:true});
         showSidePanel(code);
         if(d){const p=PARTIES[d.winner]||PARTIES.oth;document.getElementById('pin-dot').style.background=p.color;document.getElementById('pin-name').textContent=d.name;pinEl.classList.add('active');}
+        sidePanel.classList.add('bm-pinned');
       }else{
+        if(pinnedId!==null)map.setFeatureState({source:'cons',id:pinnedId},{pinned:false});
+        pinnedId=fid;pinnedCode=code;map.setFeatureState({source:'cons',id:fid},{pinned:true});
         showDrawer(code);
       }
     });
@@ -1104,8 +1102,8 @@ function buildSwingExpr(partyKey){
 // match expression, no feature-state needed.
 function buildFlipFillOpacityExpr(){
   const e=['match',['get','PCON24CD']];
-  Object.entries(DATA).forEach(([code,d])=>{e.push(code,d.winner!==d.defender?0.55:0.18);});
-  e.push(0.55);
+  Object.entries(DATA).forEach(([code,d])=>{e.push(code,d.winner!==d.defender?0.66:0.18);});
+  e.push(0.66);
   return e;
 }
 // Zoom-scaled so the flip border reads as a bold outline once you're
@@ -1132,6 +1130,7 @@ function buildFlipLineOpacityExpr(){
 }
 
 function initChoropleth(map){
+  const houseLines=()=>{const b=BE.basemap.boundary();Object.keys(b).forEach(k=>map.setPaintProperty('cons-line',k,b[k]));};
   const modeBtns=document.querySelectorAll('.vc-btn[data-mode]');
   const flipBtns=document.querySelectorAll('.vc-btn[data-flip]');
   const partyWrap=document.getElementById('party-select-wrap');
@@ -1162,14 +1161,13 @@ function initChoropleth(map){
     // Only meaningful in Winner view — Share/Swing already use fill colour
     // and opacity to carry their own signal.
     if(currentMode==='winner'&&flipsOn){
-      map.setPaintProperty('cons-fill','fill-opacity',buildFlipFillOpacityExpr());
+      map.setPaintProperty('cons-fill','fill-opacity',['case',['boolean',['feature-state','pinned'],false],0.33,buildFlipFillOpacityExpr()]);
       map.setPaintProperty('cons-line','line-width',buildFlipLineWidthExpr());
       map.setPaintProperty('cons-line','line-opacity',buildFlipLineOpacityExpr());
       flipLegend.classList.add('visible');
     }else{
-      if(currentMode==='winner')map.setPaintProperty('cons-fill','fill-opacity',0.55);
-      map.setPaintProperty('cons-line','line-width',0.6);
-      map.setPaintProperty('cons-line','line-opacity',0.4);
+      if(currentMode==='winner')map.setPaintProperty('cons-fill','fill-opacity',BE.basemap.fillOpacity());
+      houseLines();
       flipLegend.classList.remove('visible');
     }
   }
@@ -1187,10 +1185,9 @@ function initChoropleth(map){
       const ceiling=CHOROPLETH_CEILINGS[party]||50;
       const expr=buildChoroplethExpr(party,ceiling);
       map.setPaintProperty('cons-fill','fill-color',expr);
-      map.setPaintProperty('cons-fill','fill-opacity',0.85);
+      map.setPaintProperty('cons-fill','fill-opacity',BE.basemap.fillOpacity(0.85));
       map.setPaintProperty('cons-hover','fill-color',expr);
-      map.setPaintProperty('cons-line','line-width',0.6);
-      map.setPaintProperty('cons-line','line-opacity',0.4);
+      houseLines();
       partyWrap.classList.add('visible');
       flipLegend.classList.remove('visible');
       const p=PARTIES[party];
@@ -1202,10 +1199,9 @@ function initChoropleth(map){
     }else{ // swing
       const expr=buildSwingExpr(party);
       map.setPaintProperty('cons-fill','fill-color',expr);
-      map.setPaintProperty('cons-fill','fill-opacity',0.85);
+      map.setPaintProperty('cons-fill','fill-opacity',BE.basemap.fillOpacity(0.85));
       map.setPaintProperty('cons-hover','fill-color',expr);
-      map.setPaintProperty('cons-line','line-width',0.6);
-      map.setPaintProperty('cons-line','line-opacity',0.4);
+      houseLines();
       partyWrap.classList.add('visible');
       flipLegend.classList.remove('visible');
       const p=PARTIES[party];
@@ -1257,6 +1253,7 @@ function initSearch(geojsonData,map,isWideFn){
     // enough to need it) while letting compact urban ones show buildings.
     if(bounds&&map)map.fitBounds(bounds,{padding:80,maxZoom:14,duration:600});
     if(isWideFn())showSidePanel(entry.code);else showDrawer(entry.code);
+    if(window.__bmPinSeat)window.__bmPinSeat(entry.code); // search pins like a click
   }
 
   input.addEventListener('input',()=>{
