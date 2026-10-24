@@ -58,7 +58,7 @@ body{font-family: var(--be-font, 'IBM Plex Sans', 'Helvetica Neue', Helvetica, A
 .fl-flip{border:3px solid #111;}
 
 /* ── Side panel ── */
-/* A floating card over the map (like the legends/pin-indicator below), not
+/* A floating card over the map (like the legends below), not
    a docked column — it only ever occupies its own content height, so the
    map keeps full width and isn't permanently notched for an empty column. */
 #side-panel{position:absolute;top:0.625rem;right:0.625rem;width:17.5rem;max-height:calc(100% - 1.25rem);background:#fff;border:5px solid #fff;border-radius:0px;box-shadow:0 2px 14px rgba(0,0,0,.16);display:flex;flex-direction:column;overflow:hidden;z-index:16;visibility:hidden;opacity:0;transition:opacity .12s ease,visibility .12s ease;}
@@ -103,9 +103,6 @@ body{font-family: var(--be-font, 'IBM Plex Sans', 'Helvetica Neue', Helvetica, A
 .chg-nil{color:#bbb;}
 
 /* ── Pin indicator ── */
-#pin-indicator{position:absolute;top:0.625rem;left:3.125rem;z-index:15;background:rgba(255,255,255,.94);border:1px solid #ddd;border-radius:0;padding:0.3125rem 0.75rem 0.3125rem 0.5rem;font-size:0.6875rem;color:#333;display:none;align-items:center;gap:0.4375rem;cursor:pointer;box-shadow:0 1px 5px rgba(0,0,0,.1);user-select:none;}
-#pin-indicator.active{display:flex;}
-#pin-indicator:hover{background:#f0f0f0;}
 
 /* ── Choropleth legend ── */
 #choropleth-legend{position:absolute;bottom:0.625rem;left:0.625rem;z-index:15;background:rgba(255,255,255,.94);border:1px solid #ddd;border-radius:0;padding:0.5rem 0.75rem;box-shadow:0 1px 5px rgba(0,0,0,.1);display:none;flex-direction:column;gap:0.25rem;min-width:8.75rem;}
@@ -114,6 +111,7 @@ body{font-family: var(--be-font, 'IBM Plex Sans', 'Helvetica Neue', Helvetica, A
 #legend-bins{display:none;flex-direction:column;gap:0.25rem;}
 #legend-bins.visible{display:flex;}
 #legend-bins-row{display:flex;gap:0.125rem;}
+#legend-bins-row.be-share-legend{display:grid;gap:0;}
 #legend-bins-row .bin{width:1.125rem;height:0.625rem;border-radius:0;}
 #legend-bins-labels{display:flex;justify-content:space-between;font-size:0.5625rem;color:#666;}
 
@@ -195,11 +193,6 @@ body{font-family: var(--be-font, 'IBM Plex Sans', 'Helvetica Neue', Helvetica, A
     <div class="fl-row"><div class="fl-swatch fl-flip"></div><span>Gain</span></div>
   </div>
 
-  <div id="pin-indicator" role="button" title="Click to unpin">
-    <span id="pin-dot" style="width:0.5rem;height:0.5rem;border-radius:0;display:inline-block;flex-shrink:0;"></span>
-    <span id="pin-name"></span>
-    <span style="color:#bbb;">&#10005;</span>
-  </div>
 
   <div id="drawer">
     <div id="drawer-handle" role="button">
@@ -243,8 +236,6 @@ const PARTIES = {
 // Display order for stacked bars
 const BAR_ORDER = ['grn','lab','snp','pc','ldem','oth','con','ref'];
 
-// Choropleth ceilings
-const CHOROPLETH_CEILINGS = { grn:50, lab:65, snp:60, pc:60, ldem:50, oth:30, con:65, ref:55 };
 
 // ============================================================
 // ============================================================
@@ -914,14 +905,12 @@ function initMap(geojsonData){
   const container=document.getElementById('map-container');
   const sidePanel=document.getElementById('side-panel');
   const drawer=document.getElementById('drawer');
-  const pinEl=document.getElementById('pin-indicator');
   let isWide=false,hoveredId=null,pinnedId=null,pinnedCode=null;
 
   function unpin(){
     if(pinnedId!==null&&window._map)window._map.setFeatureState({source:'cons',id:pinnedId},{pinned:false});
-    pinnedId=null;pinnedCode=null;pinEl.classList.remove('active');sidePanel.classList.remove('bm-pinned');
+    pinnedId=null;pinnedCode=null;sidePanel.classList.remove('bm-pinned');
   }
-  pinEl.addEventListener('click',unpin);
 
   // Click reveal tools: magnifier (zoom to the seat) and close, plus Escape
   function closeResult(){unpin();sidePanel.classList.remove('be-has-result');dismissDrawer();}
@@ -932,7 +921,7 @@ function initMap(geojsonData){
     if(hoveredId!==null){map.setFeatureState({source:'cons',id:hoveredId},{hover:false});hoveredId=null;}
     pinnedId=fid;pinnedCode=code;map.setFeatureState({source:'cons',id:fid},{pinned:true});
     const d=DATA[code];
-    if(isWide&&d){const p=PARTIES[d.winner]||PARTIES.oth;document.getElementById('pin-dot').style.background=p.color;document.getElementById('pin-name').textContent=d.name;pinEl.classList.add('active');sidePanel.classList.add('bm-pinned');}
+    if(isWide&&d)sidePanel.classList.add('bm-pinned');
   }
   window.__bmPinSeat=pinSeat;
   function zoomToSeat(){
@@ -946,7 +935,7 @@ function initMap(geojsonData){
   function applyLayout(wide){
     isWide=wide;
     // The map is always full-width now — the side panel floats over it as
-    // a card and only appears once something's actually hovered/pinned
+    // a card and only appears once a seat is clicked
     // (see showSidePanel), so there's no permanently-reserved empty column.
     if(wide){
       drawer.classList.remove('drawer-enabled');dismissDrawer();unpin();
@@ -982,39 +971,37 @@ function initMap(geojsonData){
     // Fit to GB bounds
     map.fitBounds([[-8.2,49.8],[1.8,60.9]],{padding:20,duration:0});
 
-    // Hover
+    // Hover (desktop): highlight only. Results open on click and stay until × / Escape,
+    // so panning across the map never flicks the card.
     map.on('mousemove','cons-fill',e=>{
-      if(!isWide||pinnedId!==null)return;
+      if(!isWide||!e.features.length)return;
+      const fid=e.features[0].id;
+      if(NI_CODES.has(e.features[0].properties.PCON24CD)){map.getCanvas().style.cursor='';return;}
       map.getCanvas().style.cursor='pointer';
-      if(e.features.length>0){
-        const fid=e.features[0].id,code=e.features[0].properties.PCON24CD;
-        if(NI_CODES.has(code))return;
-        if(hoveredId!==null&&hoveredId!==fid)map.setFeatureState({source:'cons',id:hoveredId},{hover:false});
-        hoveredId=fid;map.setFeatureState({source:'cons',id:hoveredId},{hover:true});
-        showSidePanel(code);
-      }
+      if(hoveredId===fid)return;
+      if(hoveredId!==null)map.setFeatureState({source:'cons',id:hoveredId},{hover:false});
+      hoveredId=fid===pinnedId?null:fid;
+      if(hoveredId!==null)map.setFeatureState({source:'cons',id:hoveredId},{hover:true});
     });
 
     map.on('mouseleave','cons-fill',()=>{
-      if(!isWide||pinnedId!==null)return;
       map.getCanvas().style.cursor='';
       if(hoveredId!==null){map.setFeatureState({source:'cons',id:hoveredId},{hover:false});hoveredId=null;}
     });
 
-    // Click to pin
+    // Click: show and pin the seat. Clicking elsewhere leaves it open; × or Escape closes
     map.on('click',e=>{
       const features=map.queryRenderedFeatures(e.point,{layers:['cons-fill']});
-      if(!features.length){unpin();return;}
+      if(!features.length)return;
       const fid=features[0].id,code=features[0].properties.PCON24CD;
       if(NI_CODES.has(code))return;
       const d=DATA[code];
       if(isWide){
-        if(pinnedId===fid){unpin();return;}
+        if(pinnedId===fid)return;
         if(pinnedId!==null)map.setFeatureState({source:'cons',id:pinnedId},{pinned:false});
         if(hoveredId!==null){map.setFeatureState({source:'cons',id:hoveredId},{hover:false});hoveredId=null;}
         pinnedId=fid;pinnedCode=code;map.setFeatureState({source:'cons',id:pinnedId},{pinned:true});
         showSidePanel(code);
-        if(d){const p=PARTIES[d.winner]||PARTIES.oth;document.getElementById('pin-dot').style.background=p.color;document.getElementById('pin-name').textContent=d.name;pinEl.classList.add('active');}
         sidePanel.classList.add('bm-pinned');
       }else{
         if(pinnedId!==null)map.setFeatureState({source:'cons',id:pinnedId},{pinned:false});
@@ -1048,25 +1035,13 @@ function tintBlend(hex,t){
   return 'rgb('+nr+','+ng+','+nb+')';
 }
 
-// Vote share (Share view) — discrete tint bins instead of a gradient, same
-// reasoning as SWING_BINS: which band a seat falls in matters more than an
-// exact percentage read off a continuous ramp.
-const SHARE_BIN_FRACTIONS=[0.15,0.30,0.45,0.60,0.75,0.90,1.0];
-function shareBinColor(pct,ceiling,hex){
-  const frac=ceiling>0?pct/ceiling:0;
-  for(const f of SHARE_BIN_FRACTIONS){if(frac<=f)return tintBlend(hex,f);}
-  return tintBlend(hex,1.0);
-}
-
-function buildChoroplethExpr(partyKey,ceiling){
-  const hex=PARTIES[partyKey].color;
+// Vote share (Share view) — the house stepped bins from the style repo: the same
+// ranges for every party and project (under 10, 10–20 … 50–60, 60+), not a gradient.
+function buildChoroplethExpr(partyKey){
   const matchExpr=['match',['get','PCON24CD']];
-  Object.entries(DATA).forEach(([code,d])=>{
-    const pct=Math.min((d.shares[partyKey]||0)*100,ceiling);
-    matchExpr.push(code,shareBinColor(pct,ceiling,hex));
-  });
-  matchExpr.push(tintBlend(hex,SHARE_BIN_FRACTIONS[0]));
-  return matchExpr;
+  Object.entries(DATA).forEach(([code,d])=>matchExpr.push(code,(d.shares[partyKey]||0)*100));
+  matchExpr.push(0);
+  return BE.shareStep(PARTIES[partyKey].color,matchExpr);
 }
 
 // Party swing since 2024 — how a SINGLE party's own vote share has moved in
@@ -1148,9 +1123,10 @@ function initChoropleth(map){
   partySelect.value=currentParty;
 
   // Bins row/labels are rebuilt per mode — Swing uses the fixed semantic
-  // red/green scale, Share uses tint bins for whichever party is selected.
+  // red/green scale, Share uses the house share bins (BE.shareLegend).
+  const legendBinsLabelsEl=document.getElementById('legend-bins-labels');
   function renderLegendBins(colors,labels){
-    legendBinsRow.innerHTML='';
+    legendBinsRow.innerHTML='';legendBinsRow.classList.remove('be-share-legend');legendBinsLabelsEl.style.display='';
     colors.forEach(c=>{const sw=document.createElement('div');sw.className='bin';sw.style.background=c;legendBinsRow.appendChild(sw);});
     labels.forEach((t,i)=>{if(legendBinsLabels[i])legendBinsLabels[i].textContent=t;});
   }
@@ -1182,8 +1158,7 @@ function initChoropleth(map){
       legend.classList.remove('visible');legendBins.classList.remove('visible');
       applyFlips();
     }else if(mode==='share'){
-      const ceiling=CHOROPLETH_CEILINGS[party]||50;
-      const expr=buildChoroplethExpr(party,ceiling);
+      const expr=buildChoroplethExpr(party);
       map.setPaintProperty('cons-fill','fill-color',expr);
       map.setPaintProperty('cons-fill','fill-opacity',BE.basemap.fillOpacity(0.85));
       map.setPaintProperty('cons-hover','fill-color',expr);
@@ -1192,9 +1167,7 @@ function initChoropleth(map){
       flipLegend.classList.remove('visible');
       const p=PARTIES[party];
       legendTitle.textContent=p.label+' vote share';
-      const shareColors=SHARE_BIN_FRACTIONS.map(f=>tintBlend(p.color,f));
-      const mid=Math.round(ceiling*SHARE_BIN_FRACTIONS[Math.floor(SHARE_BIN_FRACTIONS.length/2)]);
-      renderLegendBins(shareColors,['0%',mid+'%',ceiling+'%+']);
+      BE.shareLegend(legendBinsRow,p.color);legendBinsLabelsEl.style.display='none';
       legend.classList.add('visible');legendBins.classList.add('visible');
     }else{ // swing
       const expr=buildSwingExpr(party);
