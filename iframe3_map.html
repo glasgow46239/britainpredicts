@@ -46,6 +46,8 @@ body{font-family: var(--be-font, 'IBM Plex Sans', 'Helvetica Neue', Helvetica, A
 /* ── Map container ── */
 #map-container{position:relative;width:100%;height:45rem;}
 #map{position:absolute;top:0;left:0;right:0;bottom:0;}
+/* Shown over the base map until the seats arrive */
+#map-loading{position:absolute;top:10px;left:52px;z-index:5;padding:6px 12px;background:rgba(255,255,255,0.92);border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,0.12);font:500 13px 'IBM Plex Sans',sans-serif;color:#333;pointer-events:none;}
 
 /* Flip legend */
 #flip-legend{position:absolute;left:0.625rem;bottom:0.625rem;z-index:15;background:rgba(255,255,255,.94);border:1px solid #ddd;border-radius:0;padding:0.5rem 0.625rem;box-shadow:0 1px 5px rgba(0,0,0,.1);font-size:0.625rem;color:#666;display:none;}
@@ -165,6 +167,7 @@ body{font-family: var(--be-font, 'IBM Plex Sans', 'Helvetica Neue', Helvetica, A
 
 <div id="map-container" data-be-layout="float">
   <div id="map"></div>
+  <div id="map-loading" role="status">Loading forecast…</div>
 
   <div id="side-panel">
     <div id="panel-inner" style="display:flex;flex-direction:column;">
@@ -649,6 +652,17 @@ function runModel() {
 // DATA LOADING
 // ============================================================
 async function loadData() {
+  // Start the optional tactical tabs now as well, so they download alongside
+  // the five below rather than one after another afterwards. Same URLs,
+  // cache-busting and retries; each is still parsed in its own try/catch below.
+  const early = url => url
+    ? fetchWithRetry(url + '&_=' + Date.now()).then(r => ({ r }), e => ({ e }))
+    : null;
+  const affinityP  = early(AFFINITY_URL);
+  const intensityP = early(INTENSITY_URL);
+  const positionsP = early(POSITIONS_URL);
+  const settled = async p => { const x = await p; if (x.e) throw x.e; return x.r; };
+
   try {
     const [rResp, pResp, oResp, sResp, pollResp] = await Promise.all([
       fetchWithRetry(RESULTS_URL),
@@ -700,7 +714,7 @@ async function loadData() {
     // is fine — falls back to DEFAULT_AFFINITY and no seat overrides.
     if (AFFINITY_URL) {
       try {
-        const aResp = await fetchWithRetry(AFFINITY_URL + '&_=' + Date.now());
+        const aResp = await settled(affinityP);
         if (aResp && aResp.ok) {
           const parsed = {};
           parseCSV(await aResp.text()).forEach(row => {
@@ -719,7 +733,7 @@ async function loadData() {
 
     if (INTENSITY_URL) {
       try {
-        const iResp = await fetchWithRetry(INTENSITY_URL + '&_=' + Date.now());
+        const iResp = await settled(intensityP);
         if (iResp && iResp.ok) {
           const parsed = {};
           parseCSV(await iResp.text()).forEach(row => {
@@ -734,7 +748,7 @@ async function loadData() {
 
     if (POSITIONS_URL) {
       try {
-        const posResp = await fetchWithRetry(POSITIONS_URL + '&_=' + Date.now());
+        const posResp = await settled(positionsP);
         if (posResp && posResp.ok) {
           const parsed = {};
           parseCSV(await posResp.text()).forEach(row => {
@@ -1011,11 +1025,22 @@ function initMap(geojsonData){
     });
   });
 
-  initSearch(geojsonData,map,()=>isWide);
   initChoropleth(map);
 
   const ro=new ResizeObserver(entries=>{const w=entries[0].contentRect.width;const nowWide=w>=660;if(nowWide!==isWide)applyLayout(nowWide);});
   ro.observe(container);
+
+  // Called by bootstrap() once the seat boundaries and model data are in:
+  // drop the boundaries into the (until now empty) seat layer, colour them
+  // with whatever view is active, and wire up search.
+  const mapLoaded=new Promise(r=>{if(map.loaded())r();else map.once('load',r);});
+  async function onData(){
+    await mapLoaded;
+    map.getSource('cons').setData(geojsonData);
+    if(window._refreshView)window._refreshView();
+    initSearch(geojsonData,map,()=>isWide);
+  }
+  return {onData};
 }
 
 // ============================================================
@@ -1246,25 +1271,41 @@ function initSearch(geojsonData,map,isWideFn){
 // BOOTSTRAP
 // ============================================================
 async function bootstrap(){
-  await loadData();
+  // Draw the map (base map and controls) straight away with an empty seat
+  // layer, rather than leaving the container blank until everything loads.
+  const geojsonData={type:'FeatureCollection',features:[]};
+  const ui=initMap(geojsonData);
+  const loadingNote=document.getElementById('map-loading');
 
-  // Try to fetch GeoJSON with proxy fallback
-  let geojsonData=null;
-  const proxies=[u=>u,u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?'+encodeURIComponent(u)];
-  for(const proxy of proxies){
-    try{
-      const r=await fetch(proxy(GEO_URL),{signal:AbortSignal.timeout(20000)});
-      if(r.ok){const t=await r.text();if(t.length>1000){geojsonData=JSON.parse(t);break;}}
-    }catch(e){}
-  }
+  // Fetch the seat boundaries at the same time as the model data, not after.
+  // Same-origin copy first (GitHub Pages serves it quickly), then the
+  // original raw.githubusercontent URL and the CORS proxies as fallbacks.
+  const fetchGeo=async()=>{
+    const sources=[
+      new URL('parlcons_westmisnter.json',location.href).href,
+      GEO_URL,
+      'https://api.allorigins.win/raw?url='+encodeURIComponent(GEO_URL),
+      'https://corsproxy.io/?'+encodeURIComponent(GEO_URL),
+    ];
+    for(const url of sources){
+      try{
+        const r=await fetch(url,{signal:AbortSignal.timeout(20000)});
+        if(r.ok){const t=await r.text();if(t.length>1000)return JSON.parse(t);}
+      }catch(e){}
+    }
+    return null;
+  };
 
-  if(!geojsonData){
-    document.getElementById('map').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:0.75rem;color:#aaa;text-align:center;padding:1.5rem;">Map loads when hosted on GitHub Pages.<br>CORS restriction prevents loading in sandbox preview.</div>';
+  const [,geo]=await Promise.all([loadData(),fetchGeo()]);
+
+  if(!geo){
+    loadingNote.innerHTML='Map loads when hosted on GitHub Pages.<br>CORS restriction prevents loading in sandbox preview.';
     return;
   }
 
-  // Filter out NI from GeoJSON (greyed via colour match but still present for context)
-  initMap(geojsonData);
+  geojsonData.features=geo.features;
+  await ui.onData();
+  loadingNote.remove();
 }
 
 bootstrap();
