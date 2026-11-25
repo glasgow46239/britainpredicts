@@ -387,7 +387,11 @@ function parseCSV(text) {
 async function fetchWithRetry(url, retries=3) {
   for (let i = 0; i < retries; i++) {
     try {
-      const r = await fetch(url + (url.includes('?') ? '&' : '?') + '_=' + Date.now());
+      // AbortSignal.timeout bounds a single request — without it, a request
+      // that hangs (rather than erroring quickly) could block the whole
+      // Promise.all in loadDataOnce() indefinitely, with none of the retries
+      // below ever kicking in.
+      const r = await fetch(url + (url.includes('?') ? '&' : '?') + '_=' + Date.now(), {signal:AbortSignal.timeout(15000)});
       if (r.ok) return r;
       if (i === retries-1) throw new Error('HTTP ' + r.status);
     } catch(e) {
@@ -651,7 +655,7 @@ function runModel() {
 // ============================================================
 // DATA LOADING
 // ============================================================
-async function loadData() {
+async function loadDataOnce() {
   // Start the optional tactical tabs now as well, so they download alongside
   // the five below rather than one after another afterwards. Same URLs,
   // cache-busting and retries; each is still parsed in its own try/catch below.
@@ -788,7 +792,39 @@ async function loadData() {
     runModel();
 
   } catch(e) {
-    console.error('loadData failed:', e);
+    // Propagate — loadData()'s retry wrapper below decides whether to retry,
+    // log, or surface a visible error. (Previously this caught and swallowed
+    // everything with a console-only message, so a single transient fetch
+    // failure anywhere in the Promise.all above silently stranded the page
+    // on "Loading forecast…" forever: runModel() never ran, so iframe1 never
+    // received the seatCounts message it's waiting on.)
+    throw e;
+  }
+}
+
+// Retries loadDataOnce() a few times with backoff before giving up. Most
+// failures here are transient (one of the Google Sheets CSV endpoints being
+// briefly slow/rate-limited), so a whole-attempt retry — on top of
+// fetchWithRetry's own per-request retries — resolves the vast majority of
+// cases automatically. Returns true on success, false if every attempt was
+// exhausted (in which case a visible, honest message replaces the silent
+// console-only failure this used to produce).
+async function loadData() {
+  const MAX_ATTEMPTS = 4;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      await loadDataOnce();
+      return true;
+    } catch (e) {
+      console.error(`loadData attempt ${attempt}/${MAX_ATTEMPTS} failed:`, e);
+      const note = document.getElementById('map-loading');
+      if (attempt === MAX_ATTEMPTS) {
+        if (note) note.innerHTML = 'Couldn\'t load the latest forecast data.<br>Please refresh the page to try again.';
+        return false;
+      }
+      if (note) note.textContent = `Having trouble reaching the forecast data — retrying (attempt ${attempt + 1} of ${MAX_ATTEMPTS})…`;
+      await new Promise(r => setTimeout(r, 2500 * attempt));
+    }
   }
 }
 
@@ -1296,7 +1332,7 @@ async function bootstrap(){
     return null;
   };
 
-  const [,geo]=await Promise.all([loadData(),fetchGeo()]);
+  const [dataOk,geo]=await Promise.all([loadData(),fetchGeo()]);
 
   if(!geo){
     loadingNote.innerHTML='Map loads when hosted on GitHub Pages.<br>CORS restriction prevents loading in sandbox preview.';
@@ -1305,7 +1341,10 @@ async function bootstrap(){
 
   geojsonData.features=geo.features;
   await ui.onData();
-  loadingNote.remove();
+  // Only clear the note on genuine success — if loadData() exhausted its
+  // retries it has already replaced the note with a visible error message,
+  // and removing it here would silently hide that from the user again.
+  if(dataOk) loadingNote.remove();
 }
 
 bootstrap();
