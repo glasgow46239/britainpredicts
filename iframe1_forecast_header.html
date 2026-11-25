@@ -189,6 +189,19 @@ setTimeout(() => {
   }
 }, 12000);
 
+// iframe3 now retries its own data load a few times on transient failures
+// before giving up (see its loadData()/loadDataOnce()), which can take up to
+// roughly a minute in the worst case. If we're STILL waiting after that,
+// stop saying "bear with" forever with no way out — tell the user plainly
+// that it hasn't worked and a refresh is the next thing to try.
+setTimeout(() => {
+  if (!dataLoaded) {
+    const status = document.getElementById('load-status');
+    status.textContent = "Couldn't load the live forecast. Try refreshing the page.";
+    status.classList.add('visible');
+  }
+}, 60000);
+
 // ── Auto-resize ──────────────────────────────────────────────────────────
 // A fixed iframe height can't fit both the 2-col mobile grid and the 4-col
 // desktop grid at once (different total heights) — so report actual content
